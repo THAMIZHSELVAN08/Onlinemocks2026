@@ -1,0 +1,48 @@
+﻿
+> frontend@0.0.0 lint
+> eslint .
+
+
+C:\Users\HP\OneDrive\Desktop\Mocks 2026\frontend\src\pages\AdminDashboard.tsx
+  263:18  warning  'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  356:23  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\HP\OneDrive\Desktop\Mocks 2026\frontend\src\pages\AdminDashboard.tsx:356:23
+  354 |     };
+  355 |
+> 356 |     useEffect(() => { fetchData(); }, []);
+      |                       ^^^^^^^^^ Avoid calling setState() directly within an effect
+  357 |
+  358 |     const handleRegister = async (e: any) => {
+  359 |         e.preventDefault();  react-hooks/set-state-in-effect
+  454:18  warning  'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  471:18  warning  'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  568:18  warning  'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+
+C:\Users\HP\OneDrive\Desktop\Mocks 2026\frontend\src\pages\StudentDashboard.tsx
+  39:18  warning  'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+  94:13  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\HP\OneDrive\Desktop\Mocks 2026\frontend\src\pages\StudentDashboard.tsx:94:13
+  92 |     useEffect(() => {
+  93 |         if (timeLeft === 0 && examStarted && !examSubmitted) {
+> 94 |             setExamSubmitted(true);
+     |             ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  95 |         }
+  96 |     }, [timeLeft, examStarted, examSubmitted]);
+  97 |  react-hooks/set-state-in-effect
+
+Γ£û 7 problems (2 errors, 5 warnings)
+
