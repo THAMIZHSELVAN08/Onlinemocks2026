@@ -1,0 +1,163 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  HR
+  STUDENT
+  VOLUNTEER
+}
+
+enum NotificationType {
+  TRANSFER
+  EVALUATION
+  GENERAL
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  username     String   @unique @db.VarChar(100)
+  passwordHash String   @map("password_hash")
+  role         Role
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Profile relations
+  hrProfile        HrProfile?
+  volunteerProfile VolunteerProfile?
+  student          Student?          @relation("StudentUser")
+
+  // FK references from other tables
+  evaluationsGiven Evaluation[]      @relation("HrEvaluations")
+  studentsManaged  Student[]         @relation("HrStudents")
+  transfersFrom    StudentTransfer[] @relation("TransferFromHr")
+  transfersTo      StudentTransfer[] @relation("TransferToHr")
+  transfersAsAdmin StudentTransfer[] @relation("TransferAdmin")
+  notifications    Notification[]    @relation("ReceiverNotifications")
+
+  @@map("users")
+}
+
+model HrProfile {
+  id            String  @id @db.Uuid
+  name          String? @db.VarChar(255)
+  companyName   String? @map("company_name") @db.VarChar(255)
+  plainPassword String? @map("plain_password")
+
+  user       User               @relation(fields: [id], references: [id], onDelete: Cascade)
+  volunteers VolunteerProfile[] @relation("HrVolunteers")
+
+  @@map("hr_profiles")
+}
+
+model VolunteerProfile {
+  id            String  @id @db.Uuid
+  name          String? @db.VarChar(255)
+  assignedHrId  String? @map("assigned_hr_id") @db.Uuid
+  plainPassword String? @map("plain_password")
+
+  user       User       @relation(fields: [id], references: [id], onDelete: Cascade)
+  assignedHr HrProfile? @relation("HrVolunteers", fields: [assignedHrId], references: [id], onDelete: SetNull)
+
+  @@map("volunteer_profiles")
+}
+
+model Student {
+  id             String   @id @db.Uuid
+  name           String?  @db.VarChar(255)
+  registerNumber String   @unique @map("register_number") @db.VarChar(50)
+  department     String?  @db.VarChar(100)
+  section        String?  @db.VarChar(10)
+  aptitudeScore  Int      @default(0) @map("aptitude_score")
+  gdScore        Int      @default(0) @map("gd_score")
+  resumeUrl      String?  @map("resume_url")
+  currentHrId    String?  @map("current_hr_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user       User              @relation("StudentUser", fields: [id], references: [id], onDelete: Cascade)
+  currentHr  User?             @relation("HrStudents", fields: [currentHrId], references: [id])
+  evaluation Evaluation?
+  attendance Attendance[]
+  transfers  StudentTransfer[]
+
+  @@index([registerNumber], name: "idx_student_register_number")
+  @@index([currentHrId], name: "idx_student_hr")
+  @@map("students")
+}
+
+model Evaluation {
+  studentId           String    @id @map("student_id") @db.Uuid
+  hrId                String?   @map("hr_id") @db.Uuid
+  appearanceAttitude  Int       @default(0) @map("appearance_attitude")
+  managerialAptitude  Int       @default(0) @map("managerial_aptitude")
+  generalAwareness    Int       @default(0) @map("general_awareness")
+  technicalKnowledge  Int       @default(0) @map("technical_knowledge")
+  communicationSkills Int       @default(0) @map("communication_skills")
+  ambition            Int       @default(0)
+  selfConfidence      Int       @default(0) @map("self_confidence")
+  strengths           String?
+  improvements        String?
+  comments            String?
+  overallScore        Decimal?  @map("overall_score") @db.Decimal(4, 2)
+  evaluationDate      DateTime? @default(now()) @map("evaluation_date") @db.Date
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  hr      User?   @relation("HrEvaluations", fields: [hrId], references: [id])
+
+  @@map("evaluations")
+}
+
+model Attendance {
+  id          Int              @id @default(autoincrement())
+  studentId   String           @map("student_id") @db.Uuid
+  checkInTime DateTime         @default(now()) @map("check_in_time")
+  ipAddress   String?          @map("ip_address") @db.VarChar(50)
+  deviceInfo  String?          @map("device_info")
+  status      AttendanceStatus @default(PRESENT)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("attendance")
+}
+
+model StudentTransfer {
+  id             Int      @id @default(autoincrement())
+  studentId      String   @map("student_id") @db.Uuid
+  fromHrId       String?  @map("from_hr_id") @db.Uuid
+  toHrId         String?  @map("to_hr_id") @db.Uuid
+  adminId        String?  @map("admin_id") @db.Uuid
+  transferReason String?  @map("transfer_reason")
+  transferredAt  DateTime @default(now()) @map("transferred_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  fromHr  User?   @relation("TransferFromHr", fields: [fromHrId], references: [id])
+  toHr    User?   @relation("TransferToHr", fields: [toHrId], references: [id])
+  admin   User?   @relation("TransferAdmin", fields: [adminId], references: [id])
+
+  @@map("student_transfers")
+}
+
+model Notification {
+  id         String           @id @default(uuid()) @db.Uuid
+  receiverId String           @map("receiver_id") @db.Uuid
+  message    String
+  type       NotificationType @default(GENERAL)
+  isRead     Boolean          @default(false) @map("is_read")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  receiver User @relation("ReceiverNotifications", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
