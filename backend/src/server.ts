@@ -6,7 +6,6 @@ import { Server } from "socket.io";
 import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
 import hrRoutes from "./routes/hr";
-import studentRoutes from "./routes/student";
 import volunteerRoutes from "./routes/volunteer";
 
 const app = express();
@@ -59,7 +58,6 @@ io.on("connection", (socket) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/hr", hrRoutes);
-app.use("/api/student", studentRoutes);
 app.use("/api/volunteer", volunteerRoutes);
 app.get("/health", (req, res) => {
   res.json({ status: "OK", timestamp: new Date() });

@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { auth, checkRole } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import { AddStudentSchema } from "../schemas";
-import { prisma } from "../lib/prisma";
+import prisma from "../lib/prisma";
 const router = express.Router();
 
 // ── GET /students ────────────────────────────────────────────────────────────
@@ -22,14 +22,28 @@ router.get("/students", auth, checkRole(["VOLUNTEER"]), async (req, res) => {
         .json({ message: "No HR assigned to this volunteer" });
     }
 
-    const students = await prisma.student.findMany({
-      where: { currentHrId: volunteer.assignedHrId },
-      include: { evaluation: { select: { studentId: true } } },
+    const assignments = await prisma.hrAssignment.findMany({
+      where: { hrId: volunteer.assignedHrId },
+      include: {
+        student: {
+          include: {
+            evaluations: {
+              where: { hrId: volunteer.assignedHrId },
+              select: { id: true },
+            },
+          },
+        },
+      },
+      orderBy: { order: "asc" },
     });
 
-    const result = students.map((s) => ({
-      ...s,
-      evaluation_status: s.evaluation ? "COMPLETED" : "INCOMPLETE",
+    const result = assignments.map((a) => ({
+      assignmentId: a.id,
+      order: a.order,
+      status: a.status,
+      ...a.student,
+      evaluation_status:
+        a.student.evaluations.length > 0 ? "COMPLETED" : "INCOMPLETE",
     }));
 
     res.json(result);
@@ -38,7 +52,6 @@ router.get("/students", auth, checkRole(["VOLUNTEER"]), async (req, res) => {
     res.status(500).send("Server Error");
   }
 });
-
 // ── POST /student ─────────────────────────────────────────────────────────────
 
 router.post(
@@ -47,7 +60,7 @@ router.post(
   checkRole(["VOLUNTEER"]),
   validate(AddStudentSchema),
   async (req, res) => {
-    const { name, register_number, department, section } = req.body;
+    const { name, registerNumber, department, section, resumeUrl } = req.body;
 
     try {
       const volunteer = await prisma.volunteerProfile.findUnique({
@@ -61,34 +74,81 @@ router.post(
           .json({ message: "No HR assigned to this volunteer" });
       }
 
-      const existing = await prisma.user.findUnique({
-        where: { username: register_number },
+      // 1️⃣ Find or create student
+      let student = await prisma.student.findUnique({
+        where: { registerNumber },
       });
-      if (existing) {
-        return res.status(400).json({ message: "Student already exists" });
-      }
 
-      const salt = await bcrypt.genSalt(10);
-      const passwordHash = await bcrypt.hash(register_number, salt);
-
-      await prisma.$transaction(async (tx) => {
-        const user = await tx.user.create({
-          data: { username: register_number, passwordHash, role: "STUDENT" },
-        });
-
-        await tx.student.create({
+      if (!student) {
+        student = await prisma.student.create({
           data: {
-            id: user.id,
             name,
-            registerNumber: register_number,
+            registerNumber,
             department,
             section,
-            currentHrId: volunteer.assignedHrId,
+            resumeUrl,
           },
         });
+      }
+
+      // 2️⃣ Check existing assignment anywhere
+      const existingAssignment = await prisma.hrAssignment.findFirst({
+        where: { studentId: student.id },
       });
 
-      res.json({ message: "Student added successfully" });
+      if (existingAssignment) {
+        // If already assigned to same HR
+        if (existingAssignment.hrId === volunteer.assignedHrId) {
+          return res.status(400).json({
+            message: "Student already assigned to your HR",
+          });
+        }
+
+        // If status NOT cancelled → block transfer
+        if (existingAssignment.status !== "CANCELLED") {
+          return res.status(400).json({
+            message:
+              "Student is currently active under another HR. They must be cancelled before reallocation.",
+          });
+        }
+
+        // If cancelled → transfer
+        const lastAssignment = await prisma.hrAssignment.findFirst({
+          where: { hrId: volunteer.assignedHrId },
+          orderBy: { order: "desc" },
+        });
+
+        const nextOrder = lastAssignment ? lastAssignment.order + 1 : 1;
+
+        await prisma.hrAssignment.update({
+          where: { id: existingAssignment.id },
+          data: {
+            hrId: volunteer.assignedHrId,
+            order: nextOrder,
+            status: "PENDING",
+          },
+        });
+
+        return res.json({ message: "Student transferred successfully" });
+      }
+
+      // 3️⃣ No assignment exists → normal assignment
+      const lastAssignment = await prisma.hrAssignment.findFirst({
+        where: { hrId: volunteer.assignedHrId },
+        orderBy: { order: "desc" },
+      });
+
+      const nextOrder = lastAssignment ? lastAssignment.order + 1 : 1;
+
+      await prisma.hrAssignment.create({
+        data: {
+          hrId: volunteer.assignedHrId,
+          studentId: student.id,
+          order: nextOrder,
+        },
+      });
+
+      res.json({ message: "Student assigned successfully" });
     } catch (err) {
       console.error(err);
       res.status(500).send("Server Error");
@@ -96,4 +156,5 @@ router.post(
   },
 );
 
+//Create a feature for changing order of students
 export default router;

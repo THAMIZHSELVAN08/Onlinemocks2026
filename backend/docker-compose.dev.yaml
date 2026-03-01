@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16.4-alpine3.20
+    environment:
+      POSTGRES_DB: tutorial_db
+      POSTGRES_USER: user123
+      POSTGRES_PASSWORD: password123
+    volumes:
+      - tutorial-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  tutorial-db-data:
+    driver: local

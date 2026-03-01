@@ -1,4 +1,5 @@
 // src/routes/admin.ts
+import { InterviewStatus } from "@prisma/client";
 import express from "express";
 import multer from "multer";
 import path from "path";
@@ -16,8 +17,8 @@ import {
   HrIdParamSchema,
   CsvStudentRowSchema,
 } from "../schemas";
-import { prisma } from "../lib/prisma";
-
+import prisma from "../lib/prisma";
+import crypto from "crypto";
 const router = express.Router();
 
 // ── Multer configs ──────────────────────────────────────────────────────────
@@ -49,30 +50,36 @@ router.get("/stats", auth, checkRole(["ADMIN"]), async (_req, res) => {
 
 router.get("/students/all", auth, checkRole(["ADMIN"]), async (_req, res) => {
   try {
-    const students = await prisma.student.findMany({
-      orderBy: { createdAt: "desc" },
+    const assignments = await prisma.hrAssignment.findMany({
       include: {
-        evaluation: { select: { studentId: true } },
-        currentHr: {
-          include: { hrProfile: { select: { name: true, companyName: true } } },
+        student: {
+          include: {
+            evaluations: true,
+          },
+        },
+        hr: {
+          include: {
+            hrProfile: { select: { name: true, companyName: true } },
+          },
         },
       },
+      orderBy: { assignedAt: "desc" },
     });
 
-    const result = students.map((s) => ({
-      ...s,
-      evaluation_status: s.evaluation ? "COMPLETED" : "INCOMPLETE",
-      hr_name: s.currentHr?.hrProfile?.name ?? null,
-      hr_company: s.currentHr?.hrProfile?.companyName ?? null,
+    const result = assignments.map((a) => ({
+      ...a.student,
+      hr_name: a.hr.hrProfile?.name ?? null,
+      hr_company: a.hr.hrProfile?.companyName ?? null,
+      status: a.status,
+      evaluation_status:
+        a.student.evaluations.length > 0 ? "COMPLETED" : "INCOMPLETE",
     }));
 
     res.json(result);
   } catch (err) {
-    console.error(err);
     res.status(500).send("Server Error");
   }
 });
-
 // ── GET /students?query= ─────────────────────────────────────────────────────
 
 router.get(
@@ -85,28 +92,35 @@ router.get(
     const terms = query.split(/[\s,]+/).filter((t) => t.length > 0);
 
     try {
-      const students = await prisma.student.findMany({
-        where:
-          terms.length > 1
-            ? { registerNumber: { in: terms } }
-            : {
-                OR: [
-                  { registerNumber: { contains: query, mode: "insensitive" } },
-                  { name: { contains: query, mode: "insensitive" } },
-                ],
-              },
+      const assignments = await prisma.hrAssignment.findMany({
+        where: {
+          student: {
+            OR:
+              terms.length > 1
+                ? [{ registerNumber: { in: terms } }]
+                : [
+                    {
+                      registerNumber: { contains: query, mode: "insensitive" },
+                    },
+                    { name: { contains: query, mode: "insensitive" } },
+                  ],
+          },
+        },
         include: {
-          user: { select: { username: true } },
-          currentHr: { include: { hrProfile: { select: { name: true } } } },
+          student: true,
+          hr: {
+            include: {
+              hrProfile: { select: { name: true, companyName: true } },
+            },
+          },
         },
       });
-
-      const result = students.map((s) => ({
-        ...s,
-        username: s.user.username,
-        hr_name: s.currentHr?.hrProfile?.name ?? null,
+      const result = assignments.map((a) => ({
+        ...a.student,
+        hr_name: a.hr.hrProfile?.name ?? null,
+        hr_company: a.hr.hrProfile?.companyName ?? null,
+        status: a.status,
       }));
-
       res.json(result);
     } catch (err) {
       console.error(err);
@@ -130,12 +144,16 @@ router.get("/hrs", auth, checkRole(["ADMIN"]), async (_req, res) => {
     const result = await Promise.all(
       hrs.map(async (hr) => {
         const [total, completed] = await Promise.all([
-          prisma.student.count({ where: { currentHrId: hr.id } }),
-          prisma.student.count({
-            where: { currentHrId: hr.id, evaluation: { isNot: null } },
+          prisma.hrAssignment.count({
+            where: { hrId: hr.id },
+          }),
+          prisma.hrAssignment.count({
+            where: {
+              hrId: hr.id,
+              status: InterviewStatus.COMPLETED,
+            },
           }),
         ]);
-
         return {
           ...hr,
           username: hr.user.username,
@@ -164,10 +182,16 @@ router.get(
   async (req, res) => {
     try {
       const { hrId } = req.params as HrIdParam;
-      const students = await prisma.student.findMany({
-        where: { currentHrId: hrId },
-        orderBy: { name: "asc" },
+      const assignments = await prisma.hrAssignment.findMany({
+        where: { hrId },
+        include: { student: true },
+        orderBy: { order: "asc" },
       });
+
+      const students = assignments.map((a) => ({
+        ...a.student,
+        status: a.status,
+      }));
       res.json(students);
     } catch (err) {
       console.error(err);
@@ -215,53 +239,50 @@ router.post(
 
     try {
       await prisma.$transaction(async (tx) => {
-        // Log each transfer
-        const students = await tx.student.findMany({
-          where: { id: { in: studentIds } },
-          select: { id: true, currentHrId: true },
-        });
+        for (const studentId of studentIds) {
+          const assignment = await tx.hrAssignment.findFirst({
+            where: { studentId },
+          });
 
-        await tx.studentTransfer.createMany({
-          data: students.map((s) => ({
-            studentId: s.id,
-            fromHrId: s.currentHrId,
-            toHrId: targetHrId,
-            adminId,
-            transferReason: reason,
-          })),
-        });
+          if (!assignment) continue;
 
-        // Bulk update
-        await tx.student.updateMany({
-          where: { id: { in: studentIds } },
-          data: { currentHrId: targetHrId },
-        });
+          // Log transfer
+          await tx.studentTransfer.create({
+            data: {
+              studentId,
+              fromHrId: assignment.hrId,
+              toHrId: targetHrId,
+              adminId,
+              transferReason: reason,
+            },
+          });
 
-        // Notify target HR
-        await tx.notification.create({
-          data: {
-            receiverId: targetHrId,
-            message: `${studentIds.length} students have been transferred to you.`,
-            type: "TRANSFER",
-          },
-        });
-      });
+          // Get next order in target HR
+          const last = await tx.hrAssignment.findFirst({
+            where: { hrId: targetHrId },
+            orderBy: { order: "desc" },
+          });
 
-      // Socket notification
-      const io = req.app.get("socketio");
-      io?.to(targetHrId).emit("NOTIFICATION", {
-        message: `${studentIds.length} students transferred to you.`,
-        type: "TRANSFER",
+          const nextOrder = last ? last.order + 1 : 1;
+
+          // Update assignment
+          await tx.hrAssignment.update({
+            where: { id: assignment.id },
+            data: {
+              hrId: targetHrId,
+              order: nextOrder,
+              status: InterviewStatus.PENDING,
+            },
+          });
+        }
       });
 
       res.json({ message: "Transfer successful" });
     } catch (err) {
-      console.error(err);
       res.status(500).send("Server Error");
     }
   },
 );
-
 // ── POST /resumes/bulk ───────────────────────────────────────────────────────
 
 router.post(
@@ -324,19 +345,10 @@ router.post(
           await prisma.$transaction(async (tx) => {
             for (const row of validRows) {
               const regNum = row.register_number!;
-              const salt = await bcrypt.genSalt(10);
-              const passwordHash = await bcrypt.hash(regNum, salt);
-
-              const user = await tx.user.upsert({
-                where: { username: regNum },
-                create: { username: regNum, passwordHash, role: "STUDENT" },
-                update: { role: "STUDENT" },
-              });
 
               await tx.student.upsert({
                 where: { registerNumber: regNum },
                 create: {
-                  id: user.id,
                   name: row.name,
                   registerNumber: regNum,
                   department: row.department,
@@ -350,7 +362,6 @@ router.post(
               });
             }
           });
-
           fs.unlinkSync(req.file!.path);
           res.json({
             message: `${validRows.length} students registered successfully`,
@@ -386,12 +397,12 @@ router.post(
         const user = await tx.user.create({
           data: { username, passwordHash, role: "HR" },
         });
+
         await tx.hrProfile.create({
           data: {
             id: user.id,
             name,
             companyName: company_name,
-            plainPassword: password,
           },
         });
       });
@@ -432,7 +443,6 @@ router.post(
             id: user.id,
             name,
             assignedHrId: hrId,
-            plainPassword: password,
           },
         });
       });
@@ -445,4 +455,41 @@ router.post(
   },
 );
 
+router.post(
+  "/reset-password/:userId",
+  auth,
+  checkRole(["ADMIN"]),
+  async (req, res) => {
+    const userId = Array.isArray(req.params.userId)
+      ? req.params.userId[0]
+      : req.params.userId;
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const newPassword = crypto.randomBytes(6).toString("base64");
+
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(newPassword, salt);
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      });
+
+      res.json({
+        message: "Password reset successfully",
+        temporaryPassword: newPassword,
+      });
+    } catch (err) {
+      res.status(500).send("Server Error");
+    }
+  },
+);
 export default router;

@@ -11,14 +11,21 @@ datasource db {
 enum Role {
   ADMIN
   HR
-  STUDENT
   VOLUNTEER
+  PIPELINE
 }
 
 enum NotificationType {
   TRANSFER
   EVALUATION
   GENERAL
+}
+
+enum InterviewStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  NO_SHOW
 }
 
 enum AttendanceStatus {
@@ -28,32 +35,42 @@ enum AttendanceStatus {
 
 model User {
   id           String   @id @default(uuid()) @db.Uuid
-  username     String   @unique @db.VarChar(100)
-  passwordHash String   @map("password_hash")
+  username     String   @unique
+  passwordHash String
   role         Role
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt    DateTime @default(now())
 
-  // Profile relations
   hrProfile        HrProfile?
   volunteerProfile VolunteerProfile?
-  student          Student?          @relation("StudentUser")
 
-  // FK references from other tables
   evaluationsGiven Evaluation[]      @relation("HrEvaluations")
-  studentsManaged  Student[]         @relation("HrStudents")
   transfersFrom    StudentTransfer[] @relation("TransferFromHr")
   transfersTo      StudentTransfer[] @relation("TransferToHr")
+
   transfersAsAdmin StudentTransfer[] @relation("TransferAdmin")
   notifications    Notification[]    @relation("ReceiverNotifications")
+  hrAssignments    HrAssignment[]
+}
 
-  @@map("users")
+model Student {
+  id             String  @id @default(uuid()) @db.Uuid
+  name           String?
+  registerNumber String  @unique
+  department     String?
+  section        String?
+  resumeUrl      String?
+  aptitudeScore  Int     @default(0)
+  gdScore        Int     @default(0)
+
+  assignments      HrAssignment[]
+  evaluations      Evaluation[]
+  studentTransfers StudentTransfer[]
 }
 
 model HrProfile {
-  id            String  @id @db.Uuid
-  name          String? @db.VarChar(255)
-  companyName   String? @map("company_name") @db.VarChar(255)
-  plainPassword String? @map("plain_password")
+  id          String  @id @db.Uuid
+  name        String? @db.VarChar(255)
+  companyName String? @map("company_name") @db.VarChar(255)
 
   user       User               @relation(fields: [id], references: [id], onDelete: Cascade)
   volunteers VolunteerProfile[] @relation("HrVolunteers")
@@ -62,10 +79,9 @@ model HrProfile {
 }
 
 model VolunteerProfile {
-  id            String  @id @db.Uuid
-  name          String? @db.VarChar(255)
-  assignedHrId  String? @map("assigned_hr_id") @db.Uuid
-  plainPassword String? @map("plain_password")
+  id           String  @id @db.Uuid
+  name         String? @db.VarChar(255)
+  assignedHrId String? @map("assigned_hr_id") @db.Uuid
 
   user       User       @relation(fields: [id], references: [id], onDelete: Cascade)
   assignedHr HrProfile? @relation("HrVolunteers", fields: [assignedHrId], references: [id], onDelete: SetNull)
@@ -73,32 +89,26 @@ model VolunteerProfile {
   @@map("volunteer_profiles")
 }
 
-model Student {
-  id             String   @id @db.Uuid
-  name           String?  @db.VarChar(255)
-  registerNumber String   @unique @map("register_number") @db.VarChar(50)
-  department     String?  @db.VarChar(100)
-  section        String?  @db.VarChar(10)
-  aptitudeScore  Int      @default(0) @map("aptitude_score")
-  gdScore        Int      @default(0) @map("gd_score")
-  resumeUrl      String?  @map("resume_url")
-  currentHrId    String?  @map("current_hr_id") @db.Uuid
-  createdAt      DateTime @default(now()) @map("created_at")
+model HrAssignment {
+  id         Int             @id @default(autoincrement())
+  hrId       String          @db.Uuid
+  studentId  String          @db.Uuid
+  order      Int
+  status     InterviewStatus @default(PENDING)
+  assignedAt DateTime        @default(now())
 
-  user       User              @relation("StudentUser", fields: [id], references: [id], onDelete: Cascade)
-  currentHr  User?             @relation("HrStudents", fields: [currentHrId], references: [id])
-  evaluation Evaluation?
-  attendance Attendance[]
-  transfers  StudentTransfer[]
+  hr      User    @relation(fields: [hrId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
 
-  @@index([registerNumber], name: "idx_student_register_number")
-  @@index([currentHrId], name: "idx_student_hr")
-  @@map("students")
+  @@unique([hrId, order])
+  @@index([hrId])
+  @@index([studentId])
 }
 
 model Evaluation {
-  studentId           String    @id @map("student_id") @db.Uuid
-  hrId                String?   @map("hr_id") @db.Uuid
+  id                  Int       @id @default(autoincrement())
+  studentId           String    @db.Uuid
+  hrId                String    @db.Uuid
   appearanceAttitude  Int       @default(0) @map("appearance_attitude")
   managerialAptitude  Int       @default(0) @map("managerial_aptitude")
   generalAwareness    Int       @default(0) @map("general_awareness")
@@ -116,20 +126,8 @@ model Evaluation {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   hr      User?   @relation("HrEvaluations", fields: [hrId], references: [id])
 
+  @@unique([studentId, hrId])
   @@map("evaluations")
-}
-
-model Attendance {
-  id          Int              @id @default(autoincrement())
-  studentId   String           @map("student_id") @db.Uuid
-  checkInTime DateTime         @default(now()) @map("check_in_time")
-  ipAddress   String?          @map("ip_address") @db.VarChar(50)
-  deviceInfo  String?          @map("device_info")
-  status      AttendanceStatus @default(PRESENT)
-
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@map("attendance")
 }
 
 model StudentTransfer {
