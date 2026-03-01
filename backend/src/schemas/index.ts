@@ -1,5 +1,6 @@
 // src/schemas/index.ts
 import { z } from "zod";
+import { registry } from "../openapi";
 
 // ─────────────────────────────────────────────
 // Reusable primitives
@@ -199,3 +200,26 @@ export const CsvStudentRowSchema = z
     path: ["register_number"],
   });
 export type CsvStudentRow = z.infer<typeof CsvStudentRowSchema>;
+
+// AUTH
+registry.register("Login", LoginSchema);
+registry.register("Register", RegisterSchema);
+
+// ADMIN
+registry.register("AdminRegisterHr", AdminRegisterHrSchema);
+registry.register("AdminRegisterVolunteer", AdminRegisterVolunteerSchema);
+registry.register("StudentTransfer", StudentTransferSchema);
+registry.register("StudentSearchQuery", StudentSearchQuerySchema);
+registry.register("HrIdParam", HrIdParamSchema);
+registry.register("CsvStudentRow", CsvStudentRowSchema);
+
+// HR
+registry.register("EvaluationCriteria", EvaluationCriteriaSchema);
+registry.register("EvaluateStudent", EvaluateStudentSchema);
+registry.register("StudentIdParam", StudentIdParamSchema);
+
+// STUDENT
+registry.register("CheckIn", CheckInSchema);
+
+// VOLUNTEER
+registry.register("AddStudent", AddStudentSchema);

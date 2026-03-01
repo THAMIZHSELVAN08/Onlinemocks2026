@@ -20,6 +20,7 @@ import {
 import prisma from "../lib/prisma";
 import crypto from "crypto";
 const router = express.Router();
+import { registry } from "../openapi";
 
 // ── Multer configs ──────────────────────────────────────────────────────────
 
@@ -493,3 +494,27 @@ router.post(
   },
 );
 export default router;
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/register/hr",
+  tags: ["Admin"],
+  description: "Register a new HR",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: AdminRegisterHrSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "HR registered successfully",
+    },
+    400: {
+      description: "Validation error",
+    },
+  },
+});

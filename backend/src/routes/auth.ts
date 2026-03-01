@@ -20,31 +20,6 @@ router.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    // Optional hardcoded admin
-    if (
-      username === process.env.ADMIN_USERNAME &&
-      password === process.env.ADMIN_PASSWORD
-    ) {
-      const token = jwt.sign(
-        {
-          id: "00000000-0000-0000-0000-000000000000",
-          username: "admin",
-          role: "ADMIN",
-        },
-        JWT_SECRET,
-        { expiresIn: "24h" },
-      );
-
-      return res.json({
-        token,
-        user: {
-          id: "00000000-0000-0000-0000-000000000000",
-          username: "admin",
-          role: "ADMIN",
-        },
-      });
-    }
-
     const user = await prisma.user.findUnique({
       where: { username },
     });
@@ -60,7 +35,11 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+      {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+      },
       JWT_SECRET,
       { expiresIn: "24h" },
     );
@@ -74,6 +53,7 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (err) {
+    console.error(err);
     res.status(500).send("Server Error");
   }
 });
