@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma";
 import dotenv from "dotenv";
+import { registry } from "../openapi";
+import { LoginSchema, AuthResponseSchema } from "../schemas";
 
 dotenv.config();
 
@@ -57,5 +59,32 @@ router.post("/login", async (req, res) => {
     res.status(500).send("Server Error");
   }
 });
-
+registry.registerPath({
+  method: "post",
+  path: "/api/auth/login",
+  tags: ["Auth"],
+  description: "Authenticate user and return JWT token",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: LoginSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Login successful",
+      content: {
+        "application/json": {
+          schema: AuthResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Invalid credentials",
+    },
+  },
+});
 export default router;

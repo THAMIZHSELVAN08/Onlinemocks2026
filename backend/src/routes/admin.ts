@@ -21,9 +21,10 @@ import prisma from "../lib/prisma";
 import crypto from "crypto";
 const router = express.Router();
 import { registry } from "../openapi";
+import { UserIdParamSchema } from "../schemas";
 
 // ── Multer configs ──────────────────────────────────────────────────────────
-
+const adminSecurity = [{ bearerAuth: [] }];
 const resumeStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, "uploads/resumes/"),
   filename: (_req, file, cb) => cb(null, file.originalname),
@@ -515,6 +516,238 @@ registry.registerPath({
     },
     400: {
       description: "Validation error",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/admin/stats",
+  tags: ["Admin"],
+  security: adminSecurity,
+  description: "Get total counts of students, HRs, and volunteers",
+  responses: {
+    200: {
+      description: "Statistics retrieved successfully",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/admin/students/all",
+  tags: ["Admin"],
+  security: adminSecurity,
+  description: "Get all students with HR assignment and evaluation status",
+  responses: {
+    200: {
+      description: "Students retrieved successfully",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/admin/students",
+  tags: ["Admin"],
+  security: adminSecurity,
+  description: "Search students by register number or name",
+  request: {
+    query: StudentSearchQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "Students search result",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/admin/hrs",
+  tags: ["Admin"],
+  security: adminSecurity,
+  description: "Get all HRs with volunteer and student statistics",
+  responses: {
+    200: {
+      description: "HR list retrieved",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/admin/hrs/{hrId}/students",
+  tags: ["Admin"],
+  security: adminSecurity,
+  description: "Get students assigned to a specific HR",
+  request: {
+    params: HrIdParamSchema,
+  },
+  responses: {
+    200: {
+      description: "Students for HR retrieved",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/admin/volunteers",
+  tags: ["Admin"],
+  security: adminSecurity,
+  description: "Get all volunteers and their assigned HR",
+  responses: {
+    200: {
+      description: "Volunteers retrieved successfully",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/students/transfer",
+  tags: ["Admin"],
+  security: adminSecurity,
+  description: "Transfer students to another HR",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: StudentTransferSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Transfer successful",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/resumes/bulk",
+  tags: ["Admin"],
+  security: adminSecurity,
+  description: "Upload resumes in bulk (multipart form-data)",
+  request: {
+    body: {
+      content: {
+        "multipart/form-data": {
+          schema: {
+            type: "object",
+            properties: {
+              files: {
+                type: "array",
+                items: {
+                  type: "string",
+                  format: "binary",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Resumes uploaded successfully",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/students/bulk",
+  tags: ["Admin"],
+  security: adminSecurity,
+  description: "Upload students via CSV file",
+  request: {
+    body: {
+      content: {
+        "multipart/form-data": {
+          schema: {
+            type: "object",
+            properties: {
+              file: {
+                type: "string",
+                format: "binary",
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Students registered successfully",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/register/hr",
+  tags: ["Admin"],
+  security: adminSecurity,
+  description: "Register a new HR",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: AdminRegisterHrSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "HR registered successfully",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/register/volunteer",
+  tags: ["Admin"],
+  security: adminSecurity,
+  description: "Register a new Volunteer",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: AdminRegisterVolunteerSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Volunteer registered successfully",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/reset-password/{userId}",
+  tags: ["Admin"],
+  security: adminSecurity,
+  description: "Reset a user's password and generate a temporary password",
+  request: {
+    params: UserIdParamSchema,
+  },
+  responses: {
+    200: {
+      description: "Password reset successfully",
+    },
+    404: {
+      description: "User not found",
     },
   },
 });

@@ -199,6 +199,27 @@ export const CsvStudentRowSchema = z
     message: "register_number or username is required",
     path: ["register_number"],
   });
+
+export const AuthResponseSchema = z.object({
+  token: z.string(),
+  user: z.object({
+    id: z.string().uuid(),
+    username: z.string(),
+    role: z.enum(["ADMIN", "HR", "VOLUNTEER", "PIPELINE"]),
+  }),
+});
+
+registry.register("AuthResponse", AuthResponseSchema);
+
+export const UserIdParamSchema = z.object({
+  userId: z.string().uuid(),
+});
+export const AssignmentIdParamSchema = z.object({
+  assignmentId: z.string().regex(/^\d+$/, "Assignment ID must be numeric"),
+});
+export type AssignmentIdParam = z.infer<typeof AssignmentIdParamSchema>;
+registry.register("AssignmentIdParam", AssignmentIdParamSchema);
+export type UserIdParam = z.infer<typeof UserIdParamSchema>;
 export type CsvStudentRow = z.infer<typeof CsvStudentRowSchema>;
 
 // AUTH
@@ -223,3 +244,4 @@ registry.register("CheckIn", CheckInSchema);
 
 // VOLUNTEER
 registry.register("AddStudent", AddStudentSchema);
+registry.register("UserIdParam", UserIdParamSchema);

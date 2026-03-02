@@ -3,9 +3,16 @@ import express from "express";
 import prisma from "../lib/prisma";
 import { auth, checkRole } from "../middleware/auth";
 import { validate } from "../middleware/validate";
-import { EvaluateStudentSchema, StudentIdParamSchema } from "../schemas";
+import {
+  EvaluateStudentSchema,
+  StudentIdParamSchema,
+  AssignmentIdParamSchema,
+} from "../schemas";
 import type { StudentIdParam } from "../schemas";
 import { InterviewStatus } from "@prisma/client";
+import { registry } from "../openapi";
+
+const hrSecurity = [{ bearerAuth: [] }];
 const router = express.Router();
 // ── GET /students ────────────────────────────────────────────────────────────
 router.get("/students", auth, checkRole(["HR"]), async (req, res) => {
@@ -167,3 +174,77 @@ router.post(
 );
 
 export default router;
+
+registry.registerPath({
+  method: "get",
+  path: "/api/hr/students",
+  tags: ["HR"],
+  security: hrSecurity,
+  description:
+    "Get all students assigned to the logged-in HR in interview order",
+  responses: {
+    200: {
+      description: "Assigned students retrieved successfully",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/hr/student/{id}",
+  tags: ["HR"],
+  security: hrSecurity,
+  description: "Get details of a specific assigned student",
+  request: {
+    params: StudentIdParamSchema,
+  },
+  responses: {
+    200: {
+      description: "Student details retrieved",
+    },
+    404: {
+      description: "Student not assigned to this HR",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/hr/evaluate",
+  tags: ["HR"],
+  security: hrSecurity,
+  description: "Submit or update evaluation for an assigned student",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: EvaluateStudentSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Evaluation submitted successfully",
+    },
+    403: {
+      description: "Not authorized to evaluate this student",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/hr/no-show/{assignmentId}",
+  tags: ["HR"],
+  security: hrSecurity,
+  description: "Mark a student as no-show for the given assignment",
+  request: {
+    params: AssignmentIdParamSchema,
+  },
+  responses: {
+    200: {
+      description: "Marked as no-show",
+    },
+  },
+});
