@@ -7,6 +7,7 @@ import {
   EvaluateStudentSchema,
   StudentIdParamSchema,
   AssignmentIdParamSchema,
+  SubmitFeedbackSchema,
 } from "../schemas";
 import type { StudentIdParam } from "../schemas";
 import { InterviewStatus } from "@prisma/client";
@@ -173,6 +174,28 @@ router.post(
   },
 );
 
+router.post(
+  "/feedback",
+  auth,
+  checkRole(["HR"]),
+  validate(SubmitFeedbackSchema),
+  async (req, res) => {
+    try {
+      const feedback = await prisma.feedback.create({
+        data: {
+          hrId: req.user.id,
+          ...req.body,
+        },
+      });
+
+      res.json({ message: "Feedback submitted successfully", feedback });
+    } catch (err) {
+      console.error(err);
+      res.status(500).send("Server Error");
+    }
+  },
+);
+
 export default router;
 
 registry.registerPath({
@@ -245,6 +268,28 @@ registry.registerPath({
   responses: {
     200: {
       description: "Marked as no-show",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/hr/feedback",
+  tags: ["HR"],
+  security: [{ bearerAuth: [] }],
+  description: "Submit feedback about recruitment experience",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: SubmitFeedbackSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Feedback submitted successfully",
     },
   },
 });

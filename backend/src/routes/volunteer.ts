@@ -1,12 +1,13 @@
 // src/routes/volunteer.ts
 import express from "express";
 import bcrypt from "bcryptjs";
+import { registry } from "../openapi";
 import { auth, checkRole } from "../middleware/auth";
 import { validate } from "../middleware/validate";
-import { AddStudentSchema } from "../schemas";
+import { AddStudentSchema, VolunteerStudentResponseSchema } from "../schemas";
 import prisma from "../lib/prisma";
 const router = express.Router();
-
+import z from "zod";
 // ── GET /students ────────────────────────────────────────────────────────────
 
 router.get("/students", auth, checkRole(["VOLUNTEER"]), async (req, res) => {
@@ -158,3 +159,61 @@ router.post(
 
 //Create a feature for changing order of students
 export default router;
+
+registry.registerPath({
+  method: "get",
+  path: "/api/volunteer/students",
+  tags: ["Volunteer"],
+  security: [{ bearerAuth: [] }],
+  description:
+    "Retrieve all students assigned to the volunteer's HR in interview order.",
+  responses: {
+    200: {
+      description: "Students retrieved successfully",
+      content: {
+        "application/json": {
+          schema: z.array(VolunteerStudentResponseSchema),
+        },
+      },
+    },
+    403: {
+      description: "Volunteer has no HR assigned",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/volunteer/student",
+  tags: ["Volunteer"],
+  security: [{ bearerAuth: [] }],
+  description: `
+Assign a student to the volunteer's HR.
+
+Behavior:
+- If student does not exist → create and assign.
+- If assigned to same HR → error.
+- If assigned to another HR and NOT cancelled → error.
+- If cancelled under another HR → transfer to volunteer's HR.
+`,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: AddStudentSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Students assigned successfully",
+    },
+    400: {
+      description: "Student already assigned or active under another HR",
+    },
+    403: {
+      description: "Volunteer has no HR assigned",
+    },
+  },
+});

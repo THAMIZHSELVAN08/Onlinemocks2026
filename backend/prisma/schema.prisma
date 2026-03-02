@@ -50,6 +50,8 @@ model User {
   transfersAsAdmin StudentTransfer[] @relation("TransferAdmin")
   notifications    Notification[]    @relation("ReceiverNotifications")
   hrAssignments    HrAssignment[]
+
+  feedbacks Feedback[] // ← ADD THIS
 }
 
 model Student {
@@ -158,4 +160,23 @@ model Notification {
   receiver User @relation("ReceiverNotifications", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model Feedback {
+  id                     Int      @id @default(autoincrement())
+  hrId                   String   @db.Uuid
+  technicalKnowledge     Int
+  serviceAndCoordination Int      @map("service_and_coordination")
+  communicationSkills    Int      @map("communication_skills")
+  futureParticipation    Int      @map("future_participation")
+  punctualityAndInterest Int      @map("punctuality_and_interest")
+  suggestions            String?
+  issuesFaced            String?  @map("issues_faced")
+  improvementSuggestions String?  @map("improvement_suggestions")
+  submittedAt            DateTime @default(now()) @map("submitted_at")
+
+  hr User @relation(fields: [hrId], references: [id], onDelete: Cascade)
+
+  @@index([hrId])
+  @@map("feedbacks")
 }

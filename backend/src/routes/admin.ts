@@ -17,11 +17,13 @@ import {
   HrIdParamSchema,
   CsvStudentRowSchema,
 } from "../schemas";
+import type { FeedbackHrParam } from "../schemas";
 import prisma from "../lib/prisma";
 import crypto from "crypto";
 const router = express.Router();
 import { registry } from "../openapi";
 import { UserIdParamSchema } from "../schemas";
+import { FeedbackHrParamSchema } from "../schemas";
 
 // ── Multer configs ──────────────────────────────────────────────────────────
 const adminSecurity = [{ bearerAuth: [] }];
@@ -494,7 +496,89 @@ router.post(
     }
   },
 );
+
+router.get(
+  "/feedback/:hrId",
+  auth,
+  checkRole(["ADMIN"]),
+  validate(FeedbackHrParamSchema, "params"),
+  async (req, res) => {
+    const { hrId } = req.params as FeedbackHrParam;
+
+    try {
+      const feedbacks = await prisma.feedback.findMany({
+        where: { hrId },
+        include: {
+          hr: {
+            include: {
+              hrProfile: true,
+            },
+          },
+        },
+        orderBy: { submittedAt: "desc" },
+      });
+
+      res.json(feedbacks);
+    } catch (err) {
+      console.error(err);
+      res.status(500).send("Server Error");
+    }
+  },
+);
+
+router.get(
+  "/feedback/analytics",
+  auth,
+  checkRole(["ADMIN"]),
+  async (_req, res) => {
+    try {
+      const result = await prisma.feedback.aggregate({
+        _avg: {
+          technicalKnowledge: true,
+          serviceAndCoordination: true,
+          communicationSkills: true,
+          futureParticipation: true,
+          punctualityAndInterest: true,
+        },
+      });
+
+      res.json(result._avg);
+    } catch (err) {
+      res.status(500).send("Server Error");
+    }
+  },
+);
+
 export default router;
+
+registry.registerPath({
+  method: "get",
+  path: "/api/admin/feedback/analytics",
+  tags: ["Admin"],
+  security: [{ bearerAuth: [] }],
+  description: "Get average feedback scores across all HRs",
+  responses: {
+    200: {
+      description: "Feedback analytics retrieved",
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/admin/feedback/{hrId}",
+  tags: ["Admin"],
+  security: [{ bearerAuth: [] }],
+  description: "Get feedback submitted by a specific HR",
+  request: {
+    params: FeedbackHrParamSchema,
+  },
+  responses: {
+    200: {
+      description: "Feedback retrieved successfully",
+    },
+  },
+});
 
 registry.registerPath({
   method: "post",

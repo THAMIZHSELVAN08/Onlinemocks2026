@@ -180,6 +180,35 @@ export const AddStudentSchema = z.object({
 export type AddStudentInput = z.infer<typeof AddStudentSchema>;
 
 // ─────────────────────────────────────────────
+// HR — Submit Feedback
+// ─────────────────────────────────────────────
+
+const rating5Schema = z.number().int().min(1).max(5);
+
+export const SubmitFeedbackSchema = z.object({
+  technicalKnowledge: rating5Schema,
+  serviceAndCoordination: rating5Schema,
+  communicationSkills: rating5Schema,
+  futureParticipation: rating5Schema,
+  punctualityAndInterest: rating5Schema,
+  suggestions: z.string().max(2000).optional(),
+  issuesFaced: z.string().max(2000).optional(),
+  improvementSuggestions: z.string().max(2000).optional(),
+});
+
+export type SubmitFeedbackInput = z.infer<typeof SubmitFeedbackSchema>;
+
+// ─────────────────────────────────────────────
+// Admin — HR Feedback Param
+// ─────────────────────────────────────────────
+
+export const FeedbackHrParamSchema = z.object({
+  hrId: z.string().uuid(),
+});
+
+export type FeedbackHrParam = z.infer<typeof FeedbackHrParamSchema>;
+
+// ─────────────────────────────────────────────
 // ADMIN — Bulk CSV Student Row
 // ─────────────────────────────────────────────
 
@@ -207,6 +236,21 @@ export const AuthResponseSchema = z.object({
     username: z.string(),
     role: z.enum(["ADMIN", "HR", "VOLUNTEER", "PIPELINE"]),
   }),
+});
+
+export const VolunteerStudentResponseSchema = z.object({
+  assignmentId: z.number(),
+  order: z.number(),
+  status: z.string(),
+  id: z.string().uuid(),
+  name: z.string().nullable(),
+  registerNumber: z.string(),
+  department: z.string().nullable(),
+  section: z.string().nullable(),
+  resumeUrl: z.string().nullable(),
+  aptitudeScore: z.number(),
+  gdScore: z.number(),
+  evaluation_status: z.enum(["COMPLETED", "INCOMPLETE"]),
 });
 
 registry.register("AuthResponse", AuthResponseSchema);
@@ -245,3 +289,7 @@ registry.register("CheckIn", CheckInSchema);
 // VOLUNTEER
 registry.register("AddStudent", AddStudentSchema);
 registry.register("UserIdParam", UserIdParamSchema);
+registry.register("VolunteerStudentResponse", VolunteerStudentResponseSchema);
+//ADMIN FEEDBACK
+registry.register("SubmitFeedback", SubmitFeedbackSchema);
+registry.register("FeedbackHrParam", FeedbackHrParamSchema);
