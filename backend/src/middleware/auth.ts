@@ -1,43 +1,40 @@
 import { Request, Response, NextFunction } from "express";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
+import { AuthUser } from "../types/auth";
+import { Role } from "@prisma/client";
 
-interface CustomRequest extends Request {
-  user?: JwtPayload | string;
-}
-
-export const auth = (req: CustomRequest, res: Response, next: NextFunction) => {
+export const auth = (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.header("Authorization")?.replace("Bearer ", "");
 
     if (!token) {
-      return res
-        .status(401)
-        .json({ message: "No authentication token, authorization denied" });
+      return res.status(401).json({
+        message: "No authentication token",
+      });
     }
 
-    if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET not defined");
-    }
-
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    const verified = jwt.verify(token, process.env.JWT_SECRET!) as AuthUser;
 
     req.user = verified;
+
     next();
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch {
+    return res.status(401).json({
+      message: "Invalid or expired token",
+    });
   }
 };
 
-export const checkRole = (roles: string[]) => {
-  return (req: CustomRequest, res: Response, next: NextFunction) => {
-    if (!req.user || typeof req.user === "string") {
-      return res.status(403).json({ message: "Invalid user payload" });
+export const checkRole = (roles: Role[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(403).json({ message: "Unauthorized" });
     }
 
-    if (!roles.includes((req.user as JwtPayload).role)) {
-      return res
-        .status(403)
-        .json({ message: "Access denied: insufficient permissions" });
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        message: "Access denied",
+      });
     }
 
     next();

@@ -1,5 +1,10 @@
 // src/types/auth.ts
-export type AuthUser = {
+// src/types/auth.ts
+
+import { Role } from "@prisma/client";
+
+export interface AuthUser {
   id: string;
-  role: "ADMIN" | "HR" | "STUDENT" | "VOLUNTEER";
-};
+  username: string;
+  role: "ADMIN" | "HR" | "PIPELINE" | "VOLUNTEER";
+}

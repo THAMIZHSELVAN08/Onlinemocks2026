@@ -9,7 +9,6 @@ import hrRoutes from "./routes/hr";
 import volunteerRoutes from "./routes/volunteer";
 import swaggerUi from "swagger-ui-express";
 import { generateOpenAPIDocument } from "./openapi";
-
 const openApiDocument = generateOpenAPIDocument();
 
 const app = express();

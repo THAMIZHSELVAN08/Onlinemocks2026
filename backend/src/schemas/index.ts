@@ -253,6 +253,16 @@ export const VolunteerStudentResponseSchema = z.object({
   evaluation_status: z.enum(["COMPLETED", "INCOMPLETE"]),
 });
 
+// ─────────────────────────────────────────────
+// VOLUNTEER — Cancel Assignment Param
+// ─────────────────────────────────────────────
+
+export const CancelAssignmentParamSchema = z.object({
+  assignmentId: z.coerce.number().int().positive(),
+});
+
+export type CancelAssignmentParam = z.infer<typeof CancelAssignmentParamSchema>;
+
 registry.register("AuthResponse", AuthResponseSchema);
 
 export const UserIdParamSchema = z.object({
@@ -265,6 +275,13 @@ export type AssignmentIdParam = z.infer<typeof AssignmentIdParamSchema>;
 registry.register("AssignmentIdParam", AssignmentIdParamSchema);
 export type UserIdParam = z.infer<typeof UserIdParamSchema>;
 export type CsvStudentRow = z.infer<typeof CsvStudentRowSchema>;
+export const CancelAssignmentResponseSchema = z.object({
+  message: z.string(),
+});
+
+export type CancelAssignmentResponse = z.infer<
+  typeof CancelAssignmentResponseSchema
+>;
 
 // AUTH
 registry.register("Login", LoginSchema);
@@ -290,6 +307,8 @@ registry.register("CheckIn", CheckInSchema);
 registry.register("AddStudent", AddStudentSchema);
 registry.register("UserIdParam", UserIdParamSchema);
 registry.register("VolunteerStudentResponse", VolunteerStudentResponseSchema);
+registry.register("CancelAssignmentParam", CancelAssignmentParamSchema);
+registry.register("CancelAssignmentResponse", CancelAssignmentResponseSchema);
 //ADMIN FEEDBACK
 registry.register("SubmitFeedback", SubmitFeedbackSchema);
 registry.register("FeedbackHrParam", FeedbackHrParamSchema);

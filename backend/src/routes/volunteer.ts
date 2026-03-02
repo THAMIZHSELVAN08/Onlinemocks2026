@@ -4,7 +4,13 @@ import bcrypt from "bcryptjs";
 import { registry } from "../openapi";
 import { auth, checkRole } from "../middleware/auth";
 import { validate } from "../middleware/validate";
-import { AddStudentSchema, VolunteerStudentResponseSchema } from "../schemas";
+import {
+  AddStudentSchema,
+  VolunteerStudentResponseSchema,
+  CancelAssignmentParamSchema,
+  CancelAssignmentResponseSchema,
+  CancelAssignmentParam,
+} from "../schemas";
 import prisma from "../lib/prisma";
 const router = express.Router();
 import z from "zod";
@@ -157,6 +163,54 @@ router.post(
   },
 );
 
+router.patch(
+  "/cancel/:assignmentId",
+  auth,
+  checkRole(["VOLUNTEER"]),
+  validate(CancelAssignmentParamSchema, "params"),
+  async (req, res) => {
+    const parsed = CancelAssignmentParamSchema.parse(req.params);
+    const { assignmentId } = parsed;
+    try {
+      const volunteer = await prisma.volunteerProfile.findUnique({
+        where: { id: req.user.id },
+        select: { assignedHrId: true },
+      });
+
+      if (!volunteer?.assignedHrId) {
+        return res.status(403).json({
+          message: "No HR assigned to this volunteer",
+        });
+      }
+
+      const assignment = await prisma.hrAssignment.findUnique({
+        where: { id: assignmentId },
+      });
+
+      if (!assignment) {
+        return res.status(404).json({
+          message: "Assignment not found",
+        });
+      }
+
+      if (assignment.hrId !== volunteer.assignedHrId) {
+        return res.status(403).json({
+          message: "Not authorized to cancel this assignment",
+        });
+      }
+
+      await prisma.hrAssignment.update({
+        where: { id: assignmentId },
+        data: { status: "CANCELLED" },
+      });
+
+      res.json({ message: "Student deallocated successfully" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).send("Server Error");
+    }
+  },
+);
 //Create a feature for changing order of students
 export default router;
 
@@ -217,3 +271,46 @@ Behavior:
     },
   },
 });
+
+registry.registerPath({
+  method: "patch",
+  path: "/api/volunteer/cancel/{assignmentId}",
+  tags: ["Volunteer"],
+  security: [{ bearerAuth: [] }],
+  description: `
+Cancel (deallocate) a student from the volunteer's assigned HR.
+
+Business Rules:
+- Volunteer must belong to an HR.
+- Volunteer can only cancel assignments under their HR.
+- Assignment status will be set to CANCELLED.
+- Assignment record is NOT deleted (audit-safe).
+- Once cancelled, student becomes eligible for reassignment.
+`,
+  request: {
+    params: CancelAssignmentParamSchema,
+  },
+  responses: {
+    200: {
+      description: "Student successfully deallocated",
+      content: {
+        "application/json": {
+          schema: CancelAssignmentResponseSchema,
+        },
+      },
+    },
+    403: {
+      description:
+        "Volunteer not assigned to HR or unauthorized to cancel this assignment",
+    },
+    404: {
+      description: "Assignment not found",
+    },
+  },
+});
+
+//PUT /api/volunteer/reorder
+//{
+//  assignmentId: number,
+//  newOrder: number
+//}
