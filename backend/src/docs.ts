@@ -5,6 +5,7 @@ import "./routes/admin";
 import "./routes/hr";
 import "./routes/volunteer";
 import "./routes/auth";
+import "./routes/pipeline";
 
 import fs from "fs";
 

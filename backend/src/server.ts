@@ -10,6 +10,7 @@ import volunteerRoutes from "./routes/volunteer";
 import swaggerUi from "swagger-ui-express";
 import { generateOpenAPIDocument } from "./openapi";
 const openApiDocument = generateOpenAPIDocument();
+import pipelineRoutes from "./routes/pipeline";
 
 const app = express();
 const server = http.createServer(app);
@@ -62,6 +63,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/hr", hrRoutes);
 app.use("/api/volunteer", volunteerRoutes);
+app.use("/api/pipeline", pipelineRoutes);
 app.get("/health", (req, res) => {
   res.json({ status: "OK", timestamp: new Date() });
 });
