@@ -6,5 +6,5 @@ import { Role } from "@prisma/client";
 export interface AuthUser {
   id: string;
   username: string;
-  role: "ADMIN" | "HR" | "PIPELINE" | "VOLUNTEER";
+  role: Role;
 }

@@ -238,6 +238,10 @@ router.post(
   checkRole(["ADMIN"]),
   validate(StudentTransferSchema),
   async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const { studentIds, targetHrId, reason } = req.body;
     const adminId = req.user.id;
 

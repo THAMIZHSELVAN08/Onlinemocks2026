@@ -12,12 +12,18 @@ import {
 import type { StudentIdParam } from "../schemas";
 import { InterviewStatus } from "@prisma/client";
 import { registry } from "../openapi";
+import { AuthenticatedRequest } from "../types/authenticated-request";
 
 const hrSecurity = [{ bearerAuth: [] }];
 const router = express.Router();
 // ── GET /students ────────────────────────────────────────────────────────────
 router.get("/students", auth, checkRole(["HR"]), async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const user = req.user; // Now narrowed
     const assignments = await prisma.hrAssignment.findMany({
       where: { hrId: req.user.id },
       include: {
@@ -56,6 +62,10 @@ router.get(
   validate(StudentIdParamSchema, "params"),
   async (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const { id } = req.params as StudentIdParam;
 
       const assignment = await prisma.hrAssignment.findFirst({
@@ -103,6 +113,10 @@ router.post(
     } = req.body;
 
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       // ensure student is assigned to HR
       const assignment = await prisma.hrAssignment.findFirst({
         where: {
@@ -181,6 +195,10 @@ router.post(
   validate(SubmitFeedbackSchema),
   async (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const feedback = await prisma.feedback.create({
         data: {
           hrId: req.user.id,

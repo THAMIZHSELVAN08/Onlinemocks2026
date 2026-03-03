@@ -4,27 +4,18 @@ import { AuthUser } from "../types/auth";
 import { Role } from "@prisma/client";
 
 export const auth = (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const token = req.header("Authorization")?.replace("Bearer ", "");
+  const token = req.header("Authorization")?.replace("Bearer ", "");
 
-    if (!token) {
-      return res.status(401).json({
-        message: "No authentication token",
-      });
-    }
-
-    const verified = jwt.verify(token, process.env.JWT_SECRET!) as AuthUser;
-
-    req.user = verified;
-
-    next();
-  } catch {
-    return res.status(401).json({
-      message: "Invalid or expired token",
-    });
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
-};
 
+  const decoded = jwt.verify(token, process.env.JWT_SECRET!) as AuthUser;
+
+  req.user = decoded;
+
+  next();
+};
 export const checkRole = (roles: Role[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {

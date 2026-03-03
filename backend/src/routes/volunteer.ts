@@ -18,6 +18,10 @@ import z from "zod";
 
 router.get("/students", auth, checkRole(["VOLUNTEER"]), async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const volunteer = await prisma.volunteerProfile.findUnique({
       where: { id: req.user.id },
       select: { assignedHrId: true },
@@ -70,6 +74,10 @@ router.post(
     const { name, registerNumber, department, section, resumeUrl } = req.body;
 
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const volunteer = await prisma.volunteerProfile.findUnique({
         where: { id: req.user.id },
         select: { assignedHrId: true },
@@ -172,6 +180,10 @@ router.patch(
     const parsed = CancelAssignmentParamSchema.parse(req.params);
     const { assignmentId } = parsed;
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const volunteer = await prisma.volunteerProfile.findUnique({
         where: { id: req.user.id },
         select: { assignedHrId: true },

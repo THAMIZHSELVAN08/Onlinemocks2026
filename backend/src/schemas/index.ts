@@ -125,13 +125,13 @@ export type HrIdParam = z.infer<typeof HrIdParamSchema>;
 // ─────────────────────────────────────────────
 
 export const EvaluationCriteriaSchema = z.object({
-  appearance_attitude: ratingSchema,
-  managerial_aptitude: ratingSchema,
-  general_awareness: ratingSchema,
-  technical_knowledge: ratingSchema,
-  communication_skills: ratingSchema,
+  appearanceAttitude: ratingSchema,
+  managerialAptitude: ratingSchema,
+  generalAwareness: ratingSchema,
+  technicalKnowledge: ratingSchema,
+  communicationSkills: ratingSchema,
   ambition: ratingSchema,
-  self_confidence: ratingSchema,
+  selfConfidence: ratingSchema,
 });
 export type EvaluationCriteria = z.infer<typeof EvaluationCriteriaSchema>;
 
