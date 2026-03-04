@@ -365,13 +365,9 @@ export default function HRDashboard() {
                                            )}
                                         </td>
                                         <td className="pr-8 py-5 text-right">
-                                           <div className="flex justify-end items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                              {s.status !== 'COMPLETED' && (
-                                                <>
-                                                  <button onClick={(e) => { e.stopPropagation(); navigate(`/hr/evaluate/${s.id}`); }} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/10 active:scale-95">Evaluate</button>
-                                                  <button onClick={(e) => { e.stopPropagation(); handleNoShow(s.assignmentId); }} className="p-2 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-slate-100 rounded-xl transition-all" title="Mark No-Show"><X size={14} strokeWidth={3} /></button>
-                                                </>
-                                              )}
+                                           <div className="flex justify-end items-center gap-3">
+                                              <button onClick={(e) => { e.stopPropagation(); navigate(`/hr/evaluate/${s.id}`); }} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/10 active:scale-95">Evaluate</button>
+                                              <button onClick={(e) => { e.stopPropagation(); handleNoShow(s.assignmentId); }} className="p-2 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-slate-100 rounded-xl transition-all" title="Mark No-Show"><X size={14} strokeWidth={3} /></button>
                                               <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-all"><MoreHorizontal size={14} /></button>
                                            </div>
                                        </td>
@@ -496,13 +492,11 @@ export default function HRDashboard() {
                                        </td>
                                        <td className="pr-10 py-10 text-right">
                                           <div className="flex items-center justify-end gap-3">
-                                             {s.status !== "COMPLETED" && (
-                                               <button onClick={() => navigate(`/hr/evaluate/${s.id}`)} className="px-8 py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/10 active:scale-95">Evaluate</button>
-                                             )}
+                                             <button onClick={() => navigate(`/hr/evaluate/${s.id}`)} className="px-8 py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/10 active:scale-95">Evaluate</button>
                                              <button onClick={() => handleNoShow(s.assignmentId)} className="p-3 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-slate-100 rounded-2xl transition-all" title="Mark No-Show"><X size={16} strokeWidth={3} /></button>
                                           </div>
                                        </td>
-                                   </tr>
+                                    </tr>
                                 ))}
                              </tbody>
                           </table>
