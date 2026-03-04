@@ -302,9 +302,9 @@ export default function HRDashboard() {
               {activeTab === "overview" && (
                 <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <SummaryCard title="Total Students" value={stats.total} subtext="Directory Size" icon={Users} />
-                    <SummaryCard title="Completed Evaluation" value={stats.completed} subtext="Audited Targets" icon={CheckCircle2} />
-                    <SummaryCard title="Awaiting Evaluation" value={stats.pending} subtext="Audit Backlog" icon={Clock} />
+                    <SummaryCard title="Total Students" value={stats.total} subtext="Student" icon={Users} />
+                    <SummaryCard title="Completed Evaluation" value={stats.completed} subtext="Evaluated" icon={CheckCircle2} />
+                    <SummaryCard title="Awaiting Evaluation" value={stats.pending} subtext="Pending" icon={Clock} />
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
