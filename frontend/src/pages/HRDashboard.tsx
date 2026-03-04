@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   MessageSquare,
   HelpCircle,
-  Bell,
   MoreHorizontal,
   Info,
   ChevronDown,
@@ -258,28 +257,12 @@ export default function HRDashboard() {
           <div className="mt-8 mb-3 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none">Management</div>
           <SidebarLink active={activeTab === "students"} onClick={() => setActiveTab("students")} icon={Users} label="Students Directory" />
           <SidebarLink active={activeTab === "feedback"} onClick={() => setActiveTab("feedback")} icon={Star} label="Event Feedback" />
-          <SidebarLink active={false} onClick={() => {}} icon={Bell} label="Notifications" />
           
           <div className="mt-8 mb-3 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none">Support</div>
           <SidebarLink active={false} onClick={() => {}} icon={HelpCircle} label="Documentation" />
         </nav>
 
         <div className="mt-auto pt-10">
-           <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
-              <div className="flex items-center gap-2 mb-3">
-                 <HelpCircle size={16} className="text-slate-400" />
-                 <span className="text-[11px] font-bold text-slate-900">Need Support?</span>
-              </div>
-              <p className="text-[10px] text-slate-500 font-medium mb-4 leading-relaxed">Get in touch with our platform agents.</p>
-              <button className="w-full bg-white border border-slate-200 py-2.5 rounded-xl text-[10px] font-bold text-slate-900 hover:bg-slate-50 transition-colors shadow-sm">
-                Contact us
-              </button>
-           </div>
-           
-           <div className="mt-6 px-3 flex flex-wrap gap-x-4 gap-y-1">
-              <span className="text-[9px] font-medium text-slate-400 cursor-pointer hover:text-slate-600">Privacy policy</span>
-              <span className="text-[9px] font-medium text-slate-400 cursor-pointer hover:text-slate-600">Terms of service</span>
-           </div>
         </div>
       </aside>
 
@@ -287,21 +270,9 @@ export default function HRDashboard() {
       <div className="flex flex-col flex-1 pl-64">
         <header className="h-20 bg-[#F7F8FA] border-b border-slate-200/40 px-10 flex items-center justify-between sticky top-0 z-40 backdrop-blur-xl">
            <div className="flex items-center gap-8">
-              <nav className="flex items-center gap-6">
-                 {['Integrations', 'Learn', 'Resources', 'Help'].map(item => (
-                   <span key={item} className="text-[12px] font-bold text-slate-400 cursor-pointer hover:text-slate-900 transition-colors">{item}</span>
-                 ))}
-              </nav>
            </div>
 
            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-slate-200 shadow-sm">
-                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                 <span className="text-[10px] font-bold text-slate-900">All systems normal</span>
-              </div>
-
-              <div className="h-8 w-[1px] bg-slate-200 mx-2" />
-
               <div className="flex items-center gap-3 cursor-pointer group">
                   <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold overflow-hidden ring-2 ring-transparent group-hover:ring-slate-200 transition-all">
                     {user?.name?.[0] || 'H'}
@@ -312,10 +283,7 @@ export default function HRDashboard() {
                   </div>
               </div>
 
-              <div className="p-2 text-slate-400 hover:text-slate-900 cursor-pointer transition-colors relative">
-                 <Bell size={20} />
-                 <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 border-2 border-[#F7F8FA] rounded-full" />
-              </div>
+
               
               <div onClick={logout} className="p-2 text-slate-400 hover:text-red-500 cursor-pointer transition-colors" title="Logout">
                  <LogOut size={20} />
