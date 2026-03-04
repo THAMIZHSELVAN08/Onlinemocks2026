@@ -189,11 +189,11 @@ export type AddStudentInput = z.infer<typeof AddStudentSchema>;
 const rating5Schema = z.number().int().min(1).max(5);
 
 export const SubmitFeedbackSchema = z.object({
-  technicalKnowledge: rating5Schema,
-  serviceAndCoordination: rating5Schema,
-  communicationSkills: rating5Schema,
-  futureParticipation: rating5Schema,
-  punctualityAndInterest: rating5Schema,
+  technicalKnowledge: ratingSchema,
+  serviceAndCoordination: ratingSchema,
+  communicationSkills: ratingSchema,
+  futureParticipation: ratingSchema,
+  punctualityAndInterest: ratingSchema,
   suggestions: z.string().max(2000).optional(),
   issuesFaced: z.string().max(2000).optional(),
   improvementSuggestions: z.string().max(2000).optional(),
