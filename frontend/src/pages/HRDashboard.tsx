@@ -6,12 +6,8 @@ import {
   X,
   Users,
   Clock,
-  AlertTriangle,
-  FileText,
-  Menu,
   LogOut,
   Loader2,
-  WifiOff,
   LayoutGrid,
   CheckCircle2,
 } from "lucide-react";
@@ -97,32 +93,9 @@ const STATUS_CONFIG: Record<InterviewStatus, { label: string; bg: string; text: 
   },
 };
 
-const AVATAR_COLORS = [
-  "bg-violet-100 text-violet-700",
-  "bg-cyan-100 text-cyan-700",
-  "bg-rose-100 text-rose-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-amber-100 text-amber-700",
-  "bg-indigo-100 text-indigo-700",
-];
-
 // ─── UI Components ────────────────────────────────────────────────────────────
 
-function Avatar({ name, size = "md" }: { name: string; size?: "md" | "lg" }) {
-  const initials = (name || "H")
-    .split(" ")
-    .map((w: string) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  const color = AVATAR_COLORS[(name || "H").charCodeAt(0) % AVATAR_COLORS.length];
-  const sz = size === "lg" ? "w-10 h-10 text-sm" : "w-8 h-8 text-xs";
-  return (
-    <div className={`${sz} ${color} rounded-full flex items-center justify-center font-semibold flex-shrink-0 select-none`}>
-      {initials}
-    </div>
-  );
-}
+// ─── UI Components ────────────────────────────────────────────────────────────
 
 function Badge({ status }: { status: InterviewStatus }) {
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.PENDING;
@@ -282,6 +255,15 @@ function EvaluateModal({
                 placeholder="Vector identified for optimization..."
               />
             </div>
+            <div>
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest block mb-2 px-1">General Comments</label>
+              <textarea
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-600/10 outline-none h-24 resize-none transition-all"
+                placeholder="Overall synthesis of candidate potential..."
+              />
+            </div>
           </div>
         </div>
 
@@ -312,7 +294,6 @@ export default function HRDashboard() {
   const [stats, setStats] = useState({ total: 0, completed: 0, pending: 0 });
   const [students, setStudents] = useState<StudentWithAssignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<"ALL" | InterviewStatus>("ALL");
@@ -344,9 +325,8 @@ export default function HRDashboard() {
       ]);
       setStats(statsRes.data);
       setStudents(studentsRes.data);
-      setError(false);
     } catch (err) {
-      setError(true);
+      console.error("Fetch failed", err);
     } finally {
       setLoading(false);
     }
@@ -426,7 +406,7 @@ export default function HRDashboard() {
             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-sm">{user?.name?.[0] || 'H'}</div>
             <div>
               <p className="text-sm font-bold text-slate-900 truncate max-w-[120px]">{user?.name || 'Interviewer'}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{user?.companyName || 'Corporate'}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{user?.company || 'Corporate'}</p>
             </div>
           </div>
           <button onClick={logout} className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
@@ -437,7 +417,13 @@ export default function HRDashboard() {
 
       {/* ── Main Content ── */}
       <main className="flex-1 ml-80 h-screen overflow-y-auto custom-scrollbar p-16">
-        <AnimatePresence mode="wait">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest animate-pulse">Synchronizing Pipeline...</p>
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
           {activeTab === "overview" && (
             <motion.div key="overview" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
               <header className="mb-12">
@@ -623,6 +609,7 @@ export default function HRDashboard() {
             </motion.div>
           )}
         </AnimatePresence>
+        )}
       </main>
 
       {/* Modals */}
