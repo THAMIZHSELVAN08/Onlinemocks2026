@@ -255,7 +255,7 @@ export default function HRDashboard() {
           <SidebarLink active={activeTab === "overview"} onClick={() => setActiveTab("overview")} icon={LayoutGrid} label="Dashboard" badge />
           
           <div className="mt-8 mb-3 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none">Management</div>
-          <SidebarLink active={activeTab === "students"} onClick={() => setActiveTab("students")} icon={Users} label="Students Directory" />
+          <SidebarLink active={activeTab === "students"} onClick={() => setActiveTab("students")} icon={Users} label="Students List" />
           <SidebarLink active={activeTab === "feedback"} onClick={() => setActiveTab("feedback")} icon={Star} label="Event Feedback" />
           
           <div className="mt-8 mb-3 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none">Support</div>
@@ -311,7 +311,7 @@ export default function HRDashboard() {
                      <div className="lg:col-span-2 bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
                         <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0">
                            <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Active Evaluation Sequence</h3>
-                           <button onClick={() => setActiveTab("students")} className="text-[11px] font-bold text-blue-600 hover:text-blue-700 underline underline-offset-4 tracking-tight uppercase">View Directory →</button>
+                           <button onClick={() => setActiveTab("students")} className="text-[11px] font-bold text-blue-600 hover:text-blue-700 underline underline-offset-4 tracking-tight uppercase">View Student List →</button>
                         </div>
                         
                         <div className="flex-1 overflow-x-auto min-h-[400px]">
@@ -380,7 +380,7 @@ export default function HRDashboard() {
 
                      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8 flex flex-col h-fit">
                         <div className="flex justify-between items-center mb-10">
-                           <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">Protocol Status <Info size={14} className="text-slate-300" /></h3>
+                           <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">Evaluation Status <Info size={14} className="text-slate-300" /></h3>
                            <MoreHorizontal size={18} className="text-slate-300" />
                         </div>
                         
@@ -396,7 +396,7 @@ export default function HRDashboard() {
                            </ResponsiveContainer>
                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                               <span className="text-4xl font-black text-slate-900">{stats.completed}</span>
-                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Verified</span>
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Evaluated</span>
                            </div>
                         </div>
 
@@ -406,7 +406,7 @@ export default function HRDashboard() {
                                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                                  <div className="flex flex-col">
                                     <span className="text-[11px] font-bold text-slate-900 leading-none mb-1">{item.name}</span>
-                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.value} Units</span>
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.value} Students</span>
                                  </div>
                               </div>
                            ))}
@@ -419,7 +419,7 @@ export default function HRDashboard() {
               {activeTab === "students" && (
                  <motion.div key="students" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                     <header className="mb-10">
-                       <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">Student <span className="text-blue-600">Directory</span></h1>
+                       <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">Student <span className="text-blue-600">List</span></h1>
                        <p className="text-slate-400 font-medium text-[15px]">Managed repository of assigned evaluation targets.</p>
                     </header>
 
@@ -545,7 +545,7 @@ export default function HRDashboard() {
                       <div className="pt-6 flex justify-end">
                          <button onClick={submitFeedback} disabled={submittingFeedback} className="px-16 py-5 bg-blue-600 text-white rounded-full text-[13px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-600/30 hover:bg-blue-700 transition-all flex items-center gap-4 active:scale-95 disabled:opacity-20 font-sans">
                             {submittingFeedback ? <Loader2 size={18} className="animate-spin" /> : <MessageSquare size={18} />}
-                            Transmit Assessment
+                            Submit Feedback
                          </button>
                       </div>
                    </div>

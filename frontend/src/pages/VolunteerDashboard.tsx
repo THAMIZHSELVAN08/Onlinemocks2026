@@ -22,7 +22,7 @@ function SectionHeader({ title, highlight }: { title: string; highlight?: string
   return (
     <header className="mb-10">
       <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">
-        {title} <span className="text-blue-600">{highlight}</span>
+        {title} <span className="text-emerald-600">{highlight}</span>
       </h1>
       <p className="text-slate-400 font-medium text-[15px]">Volunteer administrative control center.</p>
     </header>
@@ -104,11 +104,11 @@ export default function VolunteerDashboard() {
   });
 
   return (
-    <div className="flex bg-[#F7F8FA] min-h-screen font-sans text-slate-900 selection:bg-blue-600/10 selection:text-blue-600">
+    <div className="flex bg-[#F7F8FA] min-h-screen font-sans text-slate-900 selection:bg-emerald-600/10 selection:text-emerald-600">
       {/* ── Sidebar ── */}
       <aside className="w-64 bg-white border-r border-slate-100 flex flex-col fixed inset-y-0 z-50 p-6 overflow-y-auto custom-scrollbar">
         <div className="flex items-center gap-3 px-2 mb-10">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
             <Activity size={18} className="text-white" />
           </div>
           <span className="font-bold text-slate-900 tracking-tight">Volunteer Portal</span>
@@ -154,8 +154,8 @@ export default function VolunteerDashboard() {
         <main className="p-10 pb-20 relative">
           {loading ? (
              <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
-                <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] animate-pulse">Initializing Interface...</p>
+                <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
+                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] animate-pulse">Initializing Interface...</p>
              </div>
           ) : (
             <AnimatePresence mode="wait">
@@ -164,16 +164,16 @@ export default function VolunteerDashboard() {
                   <SectionHeader title="Evaluation" highlight="Overview" />
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
-                    <SummaryCard title="Evaluated Today" value={stats.enrolledToday} subtext="Daily Performance" icon={Activity} />
-                    <SummaryCard title="Total Assigned students" value={stats.totalEnrolled} subtext="Overall Targets" icon={Users} />
+                    <SummaryCard title="Evaluation Completed" value={stats.enrolledToday} subtext="Completed" icon={Activity} />
+                    <SummaryCard title="Total Assigned students" value={stats.totalEnrolled} subtext="Overall" icon={Users} />
                   </div>
 
                   <div className="max-w-6xl bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
                     <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0">
                        <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Assigned Students Stream</h3>
                        <div className="relative group flex-1 max-w-xs mx-8">
-                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={14} />
-                          <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-50 border-none rounded-xl h-10 pl-10 pr-4 text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all" placeholder="Quick search..." />
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-600 transition-colors" size={14} />
+                          <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-50 border-none rounded-xl h-10 pl-10 pr-4 text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-emerald-600/5 outline-none transition-all" placeholder="Quick search..." />
                        </div>
                     </div>
                     
@@ -200,7 +200,7 @@ export default function VolunteerDashboard() {
                                       </td>
                                       <td className="py-5">
                                          <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-900 font-black text-xs group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-900 font-black text-xs group-hover:bg-emerald-600 group-hover:text-white transition-all">
                                                {s.name[0]}
                                             </div>
                                             <div>
@@ -235,21 +235,21 @@ export default function VolunteerDashboard() {
                    <SectionHeader title="Add" highlight="Student" />
 
                    <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-12 space-y-16 overflow-hidden relative">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/5 blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2 pointer-events-none" />
                       
                       <form onSubmit={handleEnrollSubmit} className="space-y-12">
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                             <div className="space-y-4">
                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">Student Full Name</label>
-                               <input value={formData.name} onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-8 text-sm font-bold placeholder-slate-400 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all" placeholder="Full legal name" required />
+                               <input value={formData.name} onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-8 text-sm font-bold placeholder-slate-400 focus:ring-4 focus:ring-emerald-600/5 outline-none transition-all" placeholder="Full legal name" required />
                             </div>
                             <div className="space-y-4">
                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">Register Number</label>
-                               <input value={formData.register_number} onChange={(e) => setFormData(p => ({ ...p, register_number: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-8 text-sm font-bold placeholder-slate-400 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all" placeholder="12-digit student ID" required />
+                               <input value={formData.register_number} onChange={(e) => setFormData(p => ({ ...p, register_number: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-8 text-sm font-bold placeholder-slate-400 focus:ring-4 focus:ring-emerald-600/5 outline-none transition-all" placeholder="12-digit student ID" required />
                             </div>
                             <div className="space-y-4">
                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">Department</label>
-                               <select value={formData.department} onChange={(e) => setFormData(p => ({ ...p, department: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-8 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all appearance-none" required>
+                               <select value={formData.department} onChange={(e) => setFormData(p => ({ ...p, department: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-8 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-emerald-600/5 outline-none transition-all appearance-none" required>
                                   <option value="" disabled>Select Department</option>
                                   {departments.map(dept => (
                                       <option key={dept} value={dept}>{dept}</option>
@@ -258,7 +258,7 @@ export default function VolunteerDashboard() {
                             </div>
                             <div className="space-y-4">
                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1">Resume Link (Google Drive)</label>
-                               <input value={formData.resume_url} onChange={(e) => setFormData(p => ({ ...p, resume_url: e.target.value }))} className={`w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-8 text-sm font-bold placeholder-slate-400 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all ${formData.resume_url && !isValidDriveLink(formData.resume_url) ? 'border-red-500' : ''}`} placeholder="Drive link" required />
+                               <input value={formData.resume_url} onChange={(e) => setFormData(p => ({ ...p, resume_url: e.target.value }))} className={`w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-8 text-sm font-bold placeholder-slate-400 focus:ring-4 focus:ring-emerald-600/5 outline-none transition-all ${formData.resume_url && !isValidDriveLink(formData.resume_url) ? 'border-red-500' : ''}`} placeholder="Drive link" required />
                                {formData.resume_url && !isValidDriveLink(formData.resume_url) && (
                                    <p className="text-[9px] text-red-500 font-black uppercase tracking-widest ml-1 animate-pulse">Invalid Google Drive Link Format</p>
                                )}
@@ -266,7 +266,7 @@ export default function VolunteerDashboard() {
                          </div>
 
                          <div className="pt-6 flex justify-end">
-                            <button type="submit" className="px-16 py-5 bg-blue-600 text-white rounded-full text-[12px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-600/30 hover:bg-blue-700 transition-all flex items-center gap-4 active:scale-95 group">
+                            <button type="submit" className="px-16 py-5 bg-emerald-600 text-white rounded-full text-[12px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-emerald-600/30 hover:bg-emerald-700 transition-all flex items-center gap-4 active:scale-95 group">
                                Enroll Student
                                <ChevronRight size={18} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
                             </button>
@@ -291,17 +291,17 @@ function SidebarLink({ active, onClick, icon: Icon, label, badge }: any) {
       onClick={onClick}
       className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all relative group ${
         active 
-          ? "bg-blue-50 text-blue-600 shadow-sm border border-blue-100/50" 
+          ? "bg-emerald-50 text-emerald-600 shadow-sm border border-emerald-100/50" 
           : "text-slate-400 hover:text-slate-900 hover:bg-slate-50/50"
       }`}
     >
-      <div className={`p-1.5 rounded-lg transition-all ${active ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" : "text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-900"}`}>
+      <div className={`p-1.5 rounded-lg transition-all ${active ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20" : "text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-900"}`}>
         <Icon size={16} strokeWidth={active ? 3 : 2} />
       </div>
       <span className={`text-[12px] tracking-tight transition-all ${active ? "font-black" : "font-bold text-slate-400"}`}>{label}</span>
       
-      {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-blue-600 rounded-r-full" />}
-      {badge && <div className="ml-auto w-1.5 h-1.5 bg-blue-600 rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)]" />}
+      {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-600 rounded-r-full" />}
+      {badge && <div className="ml-auto w-1.5 h-1.5 bg-emerald-600 rounded-full shadow-[0_0_8px_rgba(5,150,105,0.4)]" />}
     </button>
   );
 }
@@ -316,14 +316,14 @@ function SummaryCard({ title, value, subtext, icon: Icon }: any) {
           </h4>
           <span className="text-4xl font-black text-slate-900 tracking-tighter">{value}</span>
         </div>
-        <div className="p-3 bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white rounded-2xl transition-all duration-500 shadow-sm">
+        <div className="p-3 bg-slate-50 text-slate-400 group-hover:bg-emerald-600 group-hover:text-white rounded-2xl transition-all duration-500 shadow-sm">
           <Icon size={20} strokeWidth={2} />
         </div>
       </div>
-      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 relative z-10 group-hover:text-blue-600 transition-colors">
+      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 relative z-10 group-hover:text-emerald-600 transition-colors">
         {subtext} <span className="text-lg leading-none translate-x-0 group-hover:translate-x-1 transition-transform">→</span>
       </div>
-      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-blue-600/5 rounded-full group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
+      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-600/5 rounded-full group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
     </div>
   );
 }

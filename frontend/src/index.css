@@ -1,4 +1,4 @@
-@import url("https://fonts.cdnfonts.com/css/sf-pro-display");
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
 @import "tailwindcss";
 
 @plugin "tailwindcss-animate";
@@ -15,7 +15,7 @@
   --text-muted: #64748b;
   --border: #f1f5f9;
 
-  font-family: "SF Pro Display", "SF Pro Text", system-ui, -apple-system, sans-serif;
+  font-family: "Geist", "Geist Sans", "SF Compact", "SF Compact Display", "SF Pro Display", system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color: var(--text-main);
@@ -236,6 +236,8 @@ tr:hover td {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: "Geist", "Geist Sans", "SF Compact", "SF Compact Display", "SF Pro Display", sans-serif;
 }
 
 .dark {
