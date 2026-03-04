@@ -6,14 +6,15 @@ import {
   Loader2,
   LayoutGrid,
   HelpCircle,
+  Info,
   ChevronDown,
   UserPlus,
   Activity,
   ChevronRight,
-  CheckCircle2,
   Clock,
+  Check,
   X,
-  Menu,
+  ChevronLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/useAuthStore";
@@ -21,78 +22,56 @@ import api from "../api/axios";
 
 // ─── UI Components ────────────────────────────────────────────────────────────
 
-function SectionHeader({ title, highlight }: { title: string; highlight?: string }) {
-  return (
-    <header className="mb-10">
-      <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">
-        {title} <span className="text-emerald-600">{highlight}</span>
-      </h1>
-      <p className="text-slate-400 font-medium text-[15px]">Volunteer administrative control center.</p>
-    </header>
-  );
-}
-
-function CircularStatCard({ 
+function ModernStatCard({ 
   label, 
   value, 
   total, 
-  icon: Icon, 
-  colorClass, 
-  ringColorClass, 
-  iconBgClass, 
+  color, 
+  icon: Icon
 }: { 
   label: string; 
   value: number; 
   total: number; 
-  icon: any; 
-  colorClass: string;
-  ringColorClass: string;
-  iconBgClass: string;
+  color: string; 
+  icon: any;
 }) {
-  const radius = 34;
+  const radius = 35;
   const circumference = 2 * Math.PI * radius;
-  const percentage = total > 0 ? (value / total) * 100 : 0;
-  const displayPercentage = label === "Total Assigned" ? 100 : percentage;
-  const strokeDashoffset = circumference - (displayPercentage / 100) * circumference;
+  const safeTotal = total || 1;
+  const offset = circumference - (Math.min(value, safeTotal) / safeTotal) * circumference;
 
   return (
-    <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-50 flex flex-col items-center justify-center gap-4 group hover:shadow-xl hover:shadow-black/5 transition-all duration-500">
-      <div className="w-full flex justify-start">
-        <div className={`p-2 rounded-xl ${iconBgClass} ${colorClass}`}>
-          <Icon size={16} strokeWidth={3} />
-        </div>
+    <div className="bg-white rounded-[32px] border border-slate-100 p-8 flex flex-col items-center shadow-sm hover:shadow-xl hover:shadow-black/5 transition-all duration-500 group">
+      <div className="w-full flex justify-start mb-2 group-hover:-translate-y-1 transition-transform">
+        <Icon size={18} style={{ color }} />
       </div>
-      
-      <div className="relative flex items-center justify-center my-2">
-        <svg className="w-24 h-24 transform -rotate-90">
+      <div className="relative flex items-center justify-center mb-6">
+        <svg className="w-28 h-28 transform -rotate-90">
           <circle
-            cx="48"
-            cy="48"
+            cx="56"
+            cy="56"
             r={radius}
             stroke="currentColor"
-            strokeWidth="8"
+            strokeWidth="10"
             fill="transparent"
             className="text-slate-50"
           />
           <circle
-            cx="48"
-            cy="48"
+            cx="56"
+            cy="56"
             r={radius}
-            stroke="currentColor"
-            strokeWidth="8"
-            fill="transparent"
+            stroke={color}
+            strokeWidth="10"
             strokeDasharray={circumference}
-            style={{ strokeDashoffset, transition: 'stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1)' }}
+            strokeDashoffset={isNaN(offset) ? circumference : offset}
             strokeLinecap="round"
-            className={`${ringColorClass}`}
+            fill="transparent"
+            className="transition-all duration-1000 ease-out"
           />
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-2xl font-black text-slate-900 tracking-tighter">{value}</span>
-        </div>
+        <span className="absolute text-3xl font-black text-slate-900 tracking-tighter">{value}</span>
       </div>
-
-      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+      <span className="text-[12px] font-black text-slate-400 tracking-tight uppercase">{label}</span>
     </div>
   );
 }
@@ -102,9 +81,10 @@ function CircularStatCard({
 export default function VolunteerDashboard() {
   const { user, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<"overview" | "enroll">("overview");
+  const [stats, setStats] = useState({ enrolledToday: 0, totalEnrolled: 0 });
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState({ name: '', register_number: '', department: '', resume_url: '' });
@@ -131,9 +111,11 @@ export default function VolunteerDashboard() {
 
   const fetchData = async () => {
     try {
-      const [studentsRes] = await Promise.all([
+      const [statsRes, studentsRes] = await Promise.all([
+        api.get("/volunteer/stats"),
         api.get("/volunteer/students")
       ]);
+      setStats(statsRes.data);
       setStudents(studentsRes.data);
     } catch (err) {
       console.error("Fetch failed", err);
@@ -169,46 +151,52 @@ export default function VolunteerDashboard() {
     return s.name.toLowerCase().includes(q) || s.register_number.toLowerCase().includes(q);
   });
 
+  const noShows = students.filter(s => s.status === 'NO_SHOW').length;
+  const completed = students.filter(s => s.evaluation_status === 'COMPLETED' || s.status === 'COMPLETED').length;
+  const pending = students.filter(s => s.evaluation_status === 'PENDING' || s.status === 'PENDING' || s.status === 'IN_PROGRESS').length;
+  const total = students.length;
+
+  const formattedDate = new Intl.DateTimeFormat('en-US', { 
+    weekday: 'long', 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  }).format(new Date());
+
   return (
-    <div className="flex bg-[#F7F8FA] min-h-screen font-sans text-slate-900 selection:bg-emerald-600/10 selection:text-emerald-600 overflow-x-hidden">
+    <div className="flex bg-[#F7F8FA] min-h-screen font-sans text-slate-900 selection:bg-emerald-600/10 selection:text-emerald-600 relative">
       {/* ── Sidebar ── */}
-      <aside className={`fixed inset-y-0 left-0 z-50 p-6 bg-white border-r border-slate-100 flex flex-col transition-all duration-300 ease-in-out overflow-y-auto custom-scrollbar ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full'}`}>
-        <div className="flex items-center justify-between gap-3 px-2 mb-10">
-          <div className="flex items-center gap-3">
-             <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-               <LayoutGrid size={18} className="text-white" />
-             </div>
-             <span className="font-bold text-slate-900 tracking-tight">Volunteer Portal</span>
+      <aside className={`bg-white border-r border-slate-100 flex flex-col fixed inset-y-0 z-50 p-6 overflow-y-auto custom-scrollbar transition-all duration-300 ${isSidebarCollapsed ? 'w-24' : 'w-64'}`}>
+        <div className={`flex items-center gap-3 px-2 mb-10 transition-all ${isSidebarCollapsed ? 'justify-center' : ''}`}>
+          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0">
+            <LayoutGrid size={18} className="text-white" />
           </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 lg:hidden">
-             <X size={18} />
-          </button>
+          {!isSidebarCollapsed && <span className="font-bold text-slate-900 tracking-tight">Volunteer Portal</span>}
         </div>
 
         <nav className="space-y-1">
-          <SidebarLink active={activeTab === "overview"} onClick={() => setActiveTab("overview")} icon={LayoutGrid} label="Dashboard" badge />
+          <SidebarLink active={activeTab === "overview"} onClick={() => setActiveTab("overview")} icon={LayoutGrid} label={isSidebarCollapsed ? "" : "Dashboard"} badge={!isSidebarCollapsed} />
           
-          <div className="mt-8 mb-3 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none">Registration</div>
-          <SidebarLink active={activeTab === "enroll"} onClick={() => setActiveTab("enroll")} icon={UserPlus} label="Add Student" />
+          <div className={`mt-8 mb-3 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none ${isSidebarCollapsed ? 'text-center opacity-0' : ''}`}>Workflow</div>
+          <SidebarLink active={activeTab === "enroll"} onClick={() => setActiveTab("enroll")} icon={UserPlus} label={isSidebarCollapsed ? "" : "Enroll Student"} />
           
-          <div className="mt-8 mb-3 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none">Support</div>
-          <SidebarLink active={false} onClick={() => {}} icon={HelpCircle} label="Documentation" />
+          <div className={`mt-8 mb-3 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none ${isSidebarCollapsed ? 'text-center opacity-0' : ''}`}>Support</div>
+          <SidebarLink active={false} onClick={() => {}} icon={HelpCircle} label={isSidebarCollapsed ? "" : "Documentation"} />
         </nav>
-
-        <div className="mt-auto pt-10">
-        </div>
       </aside>
 
+      {/* ── Sidebar Toggle Button ── */}
+      <button 
+        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        className={`fixed top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-slate-200 rounded-full shadow-lg z-[60] flex items-center justify-center hover:bg-slate-50 transition-all group ${isSidebarCollapsed ? 'left-20' : 'left-60'}`}
+      >
+        <ChevronLeft size={16} className={`text-slate-400 group-hover:text-emerald-600 transition-all ${isSidebarCollapsed ? 'rotate-180' : ''}`} />
+      </button>
+
       {/* ── Main Content Area ── */}
-      <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:pl-64' : 'pl-0'}`}>
-        <header className="h-20 bg-[#F7F8FA] border-b border-slate-200/40 px-6 sm:px-10 flex items-center justify-between sticky top-0 z-40 backdrop-blur-xl">
-           <div className="flex items-center gap-4 lg:gap-8">
-              <button 
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className={`p-2 hover:bg-slate-100 rounded-xl transition-all ${!isSidebarOpen ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400'}`}
-              >
-                <Menu size={20} />
-              </button>
+      <div className={`flex flex-col flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'pl-24' : 'pl-64'}`}>
+        <header className="h-20 bg-white/80 border-b border-slate-200/40 px-10 flex items-center justify-between sticky top-0 z-40 backdrop-blur-xl">
+           <div className="flex items-center gap-8">
            </div>
 
            <div className="flex items-center gap-6">
@@ -237,46 +225,38 @@ export default function VolunteerDashboard() {
           ) : (
             <AnimatePresence mode="wait">
               {activeTab === "overview" && (
-                <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-                  <SectionHeader title="Evaluation" highlight="Overview" />
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl">
-                    <CircularStatCard 
-                      label="Total Assigned" 
-                      value={students.length} 
-                      total={students.length} 
-                      icon={Users} 
-                      colorClass="text-indigo-600" 
-                      ringColorClass="text-indigo-500"
-                      iconBgClass="bg-indigo-50"
-                    />
-                    <CircularStatCard 
-                      label="Evaluated" 
-                      value={students.filter(s => s.evaluation_status === 'COMPLETED').length} 
-                      total={students.length} 
-                      icon={CheckCircle2} 
-                      colorClass="text-emerald-600" 
-                      ringColorClass="text-emerald-500"
-                      iconBgClass="bg-emerald-50"
-                    />
-                    <CircularStatCard 
-                      label="Pending" 
-                      value={students.filter(s => s.evaluation_status !== 'COMPLETED' && s.evaluation_status !== 'NO_SHOW').length} 
-                      total={students.length} 
-                      icon={Clock} 
-                      colorClass="text-amber-600" 
-                      ringColorClass="text-amber-400"
-                      iconBgClass="bg-amber-50"
-                    />
-                    <CircularStatCard 
-                      label="No Show" 
-                      value={students.filter(s => s.evaluation_status === 'NO_SHOW').length} 
-                      total={students.length} 
-                      icon={X} 
-                      colorClass="text-red-600" 
-                      ringColorClass="text-red-500"
-                      iconBgClass="bg-red-50"
-                    />
+                <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
+                  {/* Premium Centered Header */}
+                  <div className="flex items-center justify-between mb-10 bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-emerald-600" />
+                    <div>
+                      <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-1">Interview Dashboard</h1>
+                      <p className="text-slate-400 font-bold text-[13px]">Online Mocks · {formattedDate}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Overall Progress</span>
+                      <div className="flex items-center gap-4">
+                         <div className="w-56 h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                            <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.round((completed / (total || 1)) * 100)}%` }}
+                              transition={{ duration: 1.5, ease: "circOut" }}
+                              className="h-full bg-emerald-600 shadow-[0_0_12px_rgba(16,185,129,0.4)]" 
+                            />
+                         </div>
+                         <span className="text-xl font-black text-slate-900 leading-none">{Math.round((completed / (total || 1)) * 100)}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Centered Modern Stat Cards */}
+                  <div className="flex justify-center w-full">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl w-full">
+                      <ModernStatCard label="Total Assigned" value={total} total={total} color="#6366f1" icon={Users} />
+                      <ModernStatCard label="Evaluated" value={completed} total={total} color="#10b981" icon={Check} />
+                      <ModernStatCard label="Pending" value={pending} total={total} color="#f59e0b" icon={Clock} />
+                      <ModernStatCard label="No Show" value={noShows} total={total} color="#ef4444" icon={X} />
+                    </div>
                   </div>
 
                   <div className="max-w-6xl bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
@@ -414,5 +394,27 @@ function SidebarLink({ active, onClick, icon: Icon, label, badge }: any) {
       {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-600 rounded-r-full" />}
       {badge && <div className="ml-auto w-1.5 h-1.5 bg-emerald-600 rounded-full shadow-[0_0_8px_rgba(5,150,105,0.4)]" />}
     </button>
+  );
+}
+
+function SummaryCard({ title, value, subtext, icon: Icon }: any) {
+  return (
+    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 relative group hover:shadow-xl hover:shadow-black/5 transition-all duration-500 overflow-hidden">
+      <div className="flex justify-between items-start mb-6 relative z-10">
+        <div className="flex flex-col gap-1">
+          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+            {title} <Info size={12} className="text-slate-200" />
+          </h4>
+          <span className="text-4xl font-black text-slate-900 tracking-tighter">{value}</span>
+        </div>
+        <div className="p-3 bg-slate-50 text-slate-400 group-hover:bg-emerald-600 group-hover:text-white rounded-2xl transition-all duration-500 shadow-sm">
+          <Icon size={20} strokeWidth={2} />
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 relative z-10 group-hover:text-emerald-600 transition-colors">
+        {subtext} <span className="text-lg leading-none translate-x-0 group-hover:translate-x-1 transition-transform">→</span>
+      </div>
+      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-600/5 rounded-full group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
+    </div>
   );
 }
