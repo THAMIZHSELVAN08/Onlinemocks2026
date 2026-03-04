@@ -16,6 +16,8 @@ import {
   MoreHorizontal,
   Info,
   ChevronDown,
+  ExternalLink,
+  FileText,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
@@ -347,42 +349,54 @@ export default function HRDashboard() {
                         <div className="flex-1 overflow-x-auto min-h-[400px]">
                            <table className="w-full text-left">
                               <thead>
-                                 <tr className="bg-slate-50/50">
-                                    <th className="pl-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Students</th>
-                                    <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Protocol Status</th>
-                                    <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Department</th>
-                                    <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                                    <th className="pr-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
-                                 </tr>
+                                  <tr className="bg-slate-50/50">
+                                     <th className="pl-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">S.No</th>
+                                     <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Student Name</th>
+                                     <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Department</th>
+                                     <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Resume</th>
+                                     <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                                     <th className="pr-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
+                                  </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-100">
-                                 {students.slice(0, 8).map((s) => (
-                                    <tr key={s.id} className="group hover:bg-slate-50/30 transition-all cursor-pointer">
-                                       <td className="pl-8 py-5">
-                                          <div className="flex items-center gap-3">
-                                             <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-900 font-black text-xs group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                                {s.name[0]}
+                                  {students.slice(0, 8).map((s, idx) => (
+                                     <tr key={s.id} className="group hover:bg-slate-50/30 transition-all cursor-pointer">
+                                        <td className="pl-8 py-5 text-center text-[11px] font-bold text-slate-400">
+                                           {idx + 1}
+                                        </td>
+                                        <td className="py-5">
+                                           <div className="flex items-center gap-3">
+                                              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-900 font-black text-xs group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                                 {s.name[0]}
+                                              </div>
+                                              <div>
+                                                 <div className="text-[13px] font-bold text-slate-900 tracking-tight">{s.name}</div>
+                                                 <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{s.register_number}</div>
+                                              </div>
+                                           </div>
+                                        </td>
+                                        <td className="py-5 text-center">
+                                           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{s.department || "General"}</span>
+                                        </td>
+                                        <td className="py-5 text-center">
+                                           {s.resumeUrl ? (
+                                              <a href={s.resumeUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all">
+                                                 <FileText size={12} /> View
+                                              </a>
+                                           ) : (
+                                              <span className="text-[9px] font-bold text-slate-300 uppercase italic">Not Provided</span>
+                                           )}
+                                        </td>
+                                        <td className="py-5 text-center">
+                                           {s.status === "COMPLETED" ? (
+                                             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-100">
+                                               <CheckCircle2 size={12} /> Completed
                                              </div>
-                                             <div>
-                                                <div className="text-[13px] font-bold text-slate-900 tracking-tight">{s.name}</div>
-                                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{s.register_number}</div>
-                                             </div>
-                                          </div>
-                                       </td>
-                                       <td className="py-5 text-center">
-                                          <Badge status={s.status} />
-                                       </td>
-                                       <td className="py-5 text-center">
-                                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{s.department || "General"}</span>
-                                       </td>
-                                       <td className="py-5 text-center">
-                                          {s.status === "COMPLETED" && (
-                                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-100">
-                                              <CheckCircle2 size={12} /> Finalized
-                                            </div>
-                                          )}
-                                       </td>
-                                       <td className="pr-8 py-5 text-right">
+                                           ) : (
+                                             <Badge status={s.status} />
+                                           )}
+                                        </td>
+                                        <td className="pr-8 py-5 text-right">
                                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                              {s.status !== 'COMPLETED' && (
                                                <button onClick={(e) => { e.stopPropagation(); navigate(`/hr/evaluate/${s.id}`); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Star size={16} /></button>
@@ -399,7 +413,7 @@ export default function HRDashboard() {
 
                      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8 flex flex-col h-fit">
                         <div className="flex justify-between items-center mb-10">
-                           <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">Protocol Status <Info size={14} className="text-slate-300" /></h3>
+                           <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">Protocol Status <Info size={14} className="text-slate-300" /></h3>
                            <MoreHorizontal size={18} className="text-slate-300" />
                         </div>
                         
@@ -460,39 +474,53 @@ export default function HRDashboard() {
                        <div className="overflow-x-auto">
                           <table className="w-full text-left">
                              <thead>
-                                <tr className="border-b border-slate-50 bg-slate-50/30">
-                                    <th className="pl-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Students Matrix</th>
-                                    <th className="py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Protocol Status</th>
-                                    <th className="py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Specialization</th>
+                                 <tr className="border-b border-slate-50 bg-slate-50/30">
+                                    <th className="pl-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">S.No</th>
+                                    <th className="py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Student Name</th>
+                                    <th className="py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Department</th>
+                                    <th className="py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Resume</th>
                                     <th className="py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
                                     <th className="pr-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
                                  </tr>
                              </thead>
                              <tbody className="divide-y divide-slate-100">
-                                {filteredStudents.map((s) => (
-                                   <tr key={s.id} className="group hover:bg-[#FBFBFD] transition-all duration-300">
-                                      <td className="pl-10 py-10">
-                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900 font-black text-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                              {s.name[0]}
-                                            </div>
-                                            <div>
-                                              <div className="text-[14px] font-black text-slate-900 tracking-tight">{s.name}</div>
-                                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mt-1">{s.register_number}</div>
-                                            </div>
-                                         </div>
-                                      </td>
-                                      <td className="py-10 text-center">
-                                         <Badge status={s.status} />
-                                      </td>
+                                 {filteredStudents.map((s, idx) => (
+                                    <tr key={s.id} className="group hover:bg-[#FBFBFD] transition-all duration-300">
+                                       <td className="pl-10 py-10 text-center text-[13px] font-black text-slate-400">
+                                          {idx + 1}
+                                       </td>
+                                       <td className="py-10">
+                                          <div className="flex items-center gap-4">
+                                             <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900 font-black text-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                               {s.name[0]}
+                                             </div>
+                                             <div>
+                                               <div className="text-[14px] font-black text-slate-900 tracking-tight">{s.name}</div>
+                                               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mt-1">{s.register_number}</div>
+                                             </div>
+                                          </div>
+                                       </td>
                                        <td className="py-10 text-center">
                                           <span className="text-[11px] font-black text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/50 uppercase tracking-widest">{s.department || "General"}</span>
                                        </td>
                                        <td className="py-10 text-center">
-                                          {s.status === "COMPLETED" && (
+                                          {s.resumeUrl ? (
+                                             <a href={s.resumeUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                                                <ExternalLink size={14} /> Drive Link
+                                             </a>
+                                          ) : (
+                                             <span className="text-[10px] font-black text-slate-300 uppercase italic tracking-widest">N/A</span>
+                                          )}
+                                       </td>
+                                       <td className="py-10 text-center">
+                                          {s.status === "COMPLETED" ? (
                                             <div className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 shadow-sm">
-                                              <CheckCircle2 size={14} /> Finalized
+                                              <CheckCircle2 size={14} /> Completed
                                             </div>
+                                          ) : (
+                                             <div className="flex justify-center">
+                                                <Badge status={s.status} />
+                                             </div>
                                           )}
                                        </td>
                                        <td className="pr-10 py-10 text-right">
