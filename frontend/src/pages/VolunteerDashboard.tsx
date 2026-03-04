@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Clock,
   X,
+  Menu,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/useAuthStore";
@@ -103,6 +104,7 @@ export default function VolunteerDashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "enroll">("overview");
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState({ name: '', register_number: '', department: '', resume_url: '' });
@@ -168,14 +170,19 @@ export default function VolunteerDashboard() {
   });
 
   return (
-    <div className="flex bg-[#F7F8FA] min-h-screen font-sans text-slate-900 selection:bg-emerald-600/10 selection:text-emerald-600">
+    <div className="flex bg-[#F7F8FA] min-h-screen font-sans text-slate-900 selection:bg-emerald-600/10 selection:text-emerald-600 overflow-x-hidden">
       {/* ── Sidebar ── */}
-      <aside className="w-64 bg-white border-r border-slate-100 flex flex-col fixed inset-y-0 z-50 p-6 overflow-y-auto custom-scrollbar">
-        <div className="flex items-center gap-3 px-2 mb-10">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-            <Activity size={18} className="text-white" />
+      <aside className={`fixed inset-y-0 left-0 z-50 p-6 bg-white border-r border-slate-100 flex flex-col transition-all duration-300 ease-in-out overflow-y-auto custom-scrollbar ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full'}`}>
+        <div className="flex items-center justify-between gap-3 px-2 mb-10">
+          <div className="flex items-center gap-3">
+             <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+               <LayoutGrid size={18} className="text-white" />
+             </div>
+             <span className="font-bold text-slate-900 tracking-tight">Volunteer Portal</span>
           </div>
-          <span className="font-bold text-slate-900 tracking-tight">Volunteer Portal</span>
+          <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 lg:hidden">
+             <X size={18} />
+          </button>
         </div>
 
         <nav className="space-y-1">
@@ -193,9 +200,15 @@ export default function VolunteerDashboard() {
       </aside>
 
       {/* ── Main Content Area ── */}
-      <div className="flex flex-col flex-1 pl-64">
-        <header className="h-20 bg-[#F7F8FA] border-b border-slate-200/40 px-10 flex items-center justify-between sticky top-0 z-40 backdrop-blur-xl">
-           <div className="flex items-center gap-8">
+      <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:pl-64' : 'pl-0'}`}>
+        <header className="h-20 bg-[#F7F8FA] border-b border-slate-200/40 px-6 sm:px-10 flex items-center justify-between sticky top-0 z-40 backdrop-blur-xl">
+           <div className="flex items-center gap-4 lg:gap-8">
+              <button 
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className={`p-2 hover:bg-slate-100 rounded-xl transition-all ${!isSidebarOpen ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400'}`}
+              >
+                <Menu size={20} />
+              </button>
            </div>
 
            <div className="flex items-center gap-6">

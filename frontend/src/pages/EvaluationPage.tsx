@@ -93,11 +93,11 @@ const EvaluationPage = () => {
                     <div className="p-1.5 rounded-lg bg-white border border-[#D2D2D7]/30 group-hover:bg-[#F5F5F7] transition-all">
                         <ChevronLeft size={16} strokeWidth={2.5} />
                     </div>
-                    <span className="text-xs font-bold tracking-tight">Return to Directory</span>
+                    <span className="text-xs font-bold tracking-tight">Return to Dashboard</span>
                 </button>
                 <div className="flex items-center gap-2 px-4 py-2 bg-white border border-[#D2D2D7]/30 rounded-full text-[9px] font-black uppercase tracking-[0.1em] text-[#0055ff] shadow-sm">
                     <ShieldCheck size={14} strokeWidth={2} />
-                    HR Audit Protocol
+                    Evaluation Protocol
                 </div>
             </header>
 
@@ -204,7 +204,7 @@ const EvaluationPage = () => {
                     </div>
                     <button type="submit" className="w-full md:w-auto px-10 h-12 bg-[#0055ff] hover:bg-blue-600 text-white rounded-full font-bold text-[11px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 group">
                         <Save size={16} />
-                        Finalize Protocol
+                        Submit
                     </button>
                 </div>
             </form>

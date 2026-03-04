@@ -3,7 +3,8 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
     LayoutGrid, UserCheck, User, Send, CloudUpload, Users,
     LogOut, Search, Building2, UserPlus, Trash2,
-    TrendingUp, ChevronRight, PieChart as PieChartIcon
+    TrendingUp, ChevronRight, PieChart as PieChartIcon,
+    Menu, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -52,17 +53,23 @@ const Card = ({ children, className = "" }: { children: React.ReactNode, classNa
 const AdminDashboard = () => {
     const { logout, user } = useAuthStore();
     const location = useLocation();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     return (
-        <div className="flex bg-[#f8fafc] min-h-screen font-sans selection:bg-blue-500/20">
+        <div className="flex bg-[#f8fafc] min-h-screen font-sans selection:bg-blue-500/20 overflow-x-hidden">
             {/* Sidebar */}
-            <aside className="w-80 bg-[#020617] flex flex-col fixed h-screen z-50">
+            <aside className={`fixed inset-y-0 left-0 z-50 bg-[#020617] flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-80 translate-x-0' : 'w-0 -translate-x-full'}`}>
                 <div className="p-10">
-                    <div className="flex items-center gap-4 mb-1">
-                        <div className="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-600/30">A</div>
-                        <h1 className="text-[20px] font-bold text-white tracking-tight uppercase">
-                            Admin <span className="text-blue-400">Panel</span>
-                        </h1>
+                    <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-4">
+                            <div className="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-600/30">A</div>
+                            <h1 className="text-[20px] font-bold text-white tracking-tight uppercase">
+                                Admin <span className="text-blue-400">Panel</span>
+                            </h1>
+                        </div>
+                        <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-white/5 rounded-xl text-slate-400 lg:hidden">
+                            <X size={20} />
+                        </button>
                     </div>
                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-3 px-1 ml-0.5 opacity-80">Logged in as {user?.username || 'admin'}</p>
                 </div>
@@ -93,8 +100,17 @@ const AdminDashboard = () => {
             </aside>
 
             {/* Content Area */}
-            <main className="flex-1 ml-80 p-16 min-h-screen">
-                <AnimatePresence mode="wait">
+            <main className={`flex-1 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-80' : 'ml-0'}`}>
+                <header className="h-20 bg-transparent px-8 flex items-center sticky top-0 z-40">
+                    <button 
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        className={`p-2 hover:bg-white rounded-xl shadow-sm transition-all border border-slate-100 ${!isSidebarOpen ? 'bg-blue-600 text-white' : 'bg-white text-slate-400'}`}
+                    >
+                        <Menu size={20} />
+                    </button>
+                </header>
+                <div className="px-16 pb-16">
+                    <AnimatePresence mode="wait">
                     <Routes location={location} key={location.pathname}>
                         <Route path="/" element={<Overview />} />
                         <Route path="/hrs" element={<ManageHRs />} />
@@ -106,6 +122,7 @@ const AdminDashboard = () => {
                         <Route path="/stats" element={<StatsDashboard />} />
                     </Routes>
                 </AnimatePresence>
+                </div>
             </main>
         </div>
     );
