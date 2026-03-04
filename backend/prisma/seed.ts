@@ -6,14 +6,14 @@ async function main() {
   console.log("🌱 Seeding database...");
 
   // Clean everything first (order matters)
-  // await prisma.notification.deleteMany();
-  // await prisma.studentTransfer.deleteMany();
-  // await prisma.evaluation.deleteMany();
-  // await prisma.hrAssignment.deleteMany();
-  // await prisma.volunteerProfile.deleteMany();
-  // await prisma.hrProfile.deleteMany();
-  // await prisma.student.deleteMany();
-  // await prisma.user.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.studentTransfer.deleteMany();
+  await prisma.evaluation.deleteMany();
+  await prisma.hrAssignment.deleteMany();
+  await prisma.volunteerProfile.deleteMany();
+  await prisma.hrProfile.deleteMany();
+  await prisma.student.deleteMany();
+  await prisma.user.deleteMany();
 
   // ─────────────────────────────────────────
   // Admin
@@ -32,19 +32,22 @@ async function main() {
   // HRs
   // ─────────────────────────────────────────
   const hrs = [];
+  const hrNames = ["Rajesh Kumar", "Alex", "Meera Nair", "selvan"];
+  const hrCompanies = ["TechCorp", "Innovate Solutions", "DataFlow Inc", "Innovate Solutions"];
 
-  for (let i = 1; i <= 3; i++) {
-    const passwordHash = await bcrypt.hash(`hr${i}pass`, 10);
+  for (let i = 0; i < hrNames.length; i++) {
+    const username = hrNames[i] === "selvan" ? "selvan" : hrNames[i].toLowerCase().split(' ')[0];
+    const passwordHash = await bcrypt.hash(username === "selvan" ? "selvan123" : `${username}123`, 10);
 
     const user = await prisma.user.create({
       data: {
-        username: `hr${i}`,
+        username: username,
         passwordHash,
         role: Role.HR,
         hrProfile: {
           create: {
-            name: `HR ${i}`,
-            companyName: `Company ${i}`,
+            name: hrNames[i],
+            companyName: hrCompanies[i],
           },
         },
       },
@@ -75,78 +78,7 @@ async function main() {
     });
   }
 
-  // ─────────────────────────────────────────
-  // Students + Assignments
-  // ─────────────────────────────────────────
-  const students = [];
 
-  for (let i = 1; i <= 20; i++) {
-    const student = await prisma.student.create({
-      data: {
-        name: `Student ${i}`,
-        registerNumber: `REG2026${i.toString().padStart(3, "0")}`,
-        department: "CSE",
-        section: "A",
-        aptitudeScore: Math.floor(Math.random() * 100),
-        gdScore: Math.floor(Math.random() * 100),
-      },
-    });
-
-    students.push(student);
-  }
-
-  // Assign evenly across HRs
-  let orderMap: Record<number, number> = {
-    0: 1,
-    1: 1,
-    2: 1,
-  };
-  for (let i = 0; i < students.length; i++) {
-    const hrIndex = i % 3;
-
-    await prisma.hrAssignment.create({
-      data: {
-        hrId: hrs[hrIndex].id,
-        studentId: students[i].id,
-        order: orderMap[hrIndex],
-        status:
-          i % 5 === 0
-            ? InterviewStatus.COMPLETED
-            : i % 7 === 0
-              ? InterviewStatus.NO_SHOW
-              : InterviewStatus.PENDING,
-      },
-    });
-
-    orderMap[hrIndex]++;
-  }
-
-  // ─────────────────────────────────────────
-  // Some Evaluations
-  // ─────────────────────────────────────────
-  const completedAssignments = await prisma.hrAssignment.findMany({
-    where: { status: InterviewStatus.COMPLETED },
-  });
-
-  for (const assignment of completedAssignments) {
-    await prisma.evaluation.create({
-      data: {
-        studentId: assignment.studentId,
-        hrId: assignment.hrId,
-        appearanceAttitude: 8,
-        managerialAptitude: 7,
-        generalAwareness: 6,
-        technicalKnowledge: 8,
-        communicationSkills: 7,
-        ambition: 8,
-        selfConfidence: 7,
-        strengths: "Good problem solving",
-        improvements: "Needs confidence boost",
-        comments: "Promising candidate",
-        overallScore: 7.5,
-      },
-    });
-  }
 
   console.log("✅ Seeding complete!");
 }

@@ -16,6 +16,27 @@ import { AuthenticatedRequest } from "../types/authenticated-request";
 
 const hrSecurity = [{ bearerAuth: [] }];
 const router = express.Router();
+// ── GET /stats ───────────────────────────────────────────────────────────────
+router.get("/stats", auth, checkRole(["HR"]), async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const [total, completed, pending] = await Promise.all([
+      prisma.hrAssignment.count({ where: { hrId: req.user.id } }),
+      prisma.hrAssignment.count({
+        where: { hrId: req.user.id, status: "COMPLETED" },
+      }),
+      prisma.hrAssignment.count({
+        where: { hrId: req.user.id, status: "PENDING" },
+      }),
+    ]);
+
+    res.json({ total, completed, pending });
+  } catch (err) {
+    res.status(500).send("Server Error");
+  }
+});
+
 // ── GET /students ────────────────────────────────────────────────────────────
 router.get("/students", auth, checkRole(["HR"]), async (req, res) => {
   try {
@@ -43,6 +64,7 @@ router.get("/students", auth, checkRole(["HR"]), async (req, res) => {
       order: a.order,
       status: a.status,
       ...a.student,
+      register_number: a.student.registerNumber,
       evaluation_status:
         a.student.evaluations.length > 0 ? "COMPLETED" : "INCOMPLETE",
     }));
@@ -84,6 +106,7 @@ router.get(
 
       res.json({
         ...assignment.student,
+        register_number: assignment.student.registerNumber,
         assignmentId: assignment.id,
         order: assignment.order,
         status: assignment.status,

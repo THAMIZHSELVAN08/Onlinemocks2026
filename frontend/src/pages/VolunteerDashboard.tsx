@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
     LayoutGrid, UserPlus, LogOut,
-    PlusCircle, Users, Activity, ChevronRight
+    Users, Activity, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
@@ -12,24 +12,24 @@ const SidebarLink = ({ to, icon: Icon, label }: { to: string, icon: React.Elemen
     const location = useLocation();
     const isActive = location.pathname === to;
     return (
-        <Link to={to} className="block px-4 mb-2">
-            <div className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all duration-300 ${isActive
-                ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-900/40'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+        <Link to={to} className="block mb-2">
+            <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl transition-all duration-400 ${isActive
+                ? 'bg-[#0055ff] text-white shadow-lg shadow-blue-500/20'
+                : 'text-slate-500 hover:text-black hover:bg-[#F5F5F7]/50'
                 }`}>
-                <Icon size={20} />
-                <span className="text-sm tracking-tight">{label}</span>
+                <Icon size={19} strokeWidth={isActive ? 2.5 : 1.5} />
+                <span className={`text-sm tracking-tight ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
+                {isActive && <motion.div layoutId="sidebar-accent" className="ml-auto w-1.5 h-1.5 bg-white rounded-full" />}
             </div>
         </Link>
     );
 };
 
 const SectionHeader = ({ title, highlight }: { title: string, highlight?: string }) => (
-    <div className="mb-10">
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight uppercase italic">
-            {title} <span className="text-[#2563eb]">{highlight}</span>
+    <div className="mb-12">
+        <h1 className="text-5xl font-bold text-black tracking-tight leading-tight">
+            {title} <span className="text-[#0055ff]">{highlight}</span>
         </h1>
-        <div className="h-1 w-20 bg-[#2563eb] rounded-full mt-4" />
     </div>
 );
 
@@ -38,32 +38,36 @@ const VolunteerDashboard = () => {
     const location = useLocation();
 
     return (
-        <div className="flex bg-[#f8fafc] min-h-screen font-sans">
+        <div className="flex bg-[#FBFBFD] min-h-screen font-sans antialiased text-[#111111]">
             {/* Sidebar */}
-            <aside className="w-72 bg-[#0f172a] flex flex-col fixed h-screen z-50 shadow-2xl">
-                <div className="p-8">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-[#2563eb] rounded-2xl flex items-center justify-center text-white font-black italic">V</div>
-                        <h1 className="text-xl font-black text-white tracking-tighter uppercase whitespace-nowrap">Support <span className="text-[#2563eb]">Node</span></h1>
+            <aside className="w-80 bg-white/80 backdrop-blur-xl border-r border-[#D2D2D7]/30 flex flex-col fixed h-screen z-50">
+                <div className="p-10 pt-12">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="w-11 h-11 bg-gradient-to-br from-[#0055ff] to-[#9d00ff] rounded-xl flex items-center justify-center text-white font-semibold shadow-lg shadow-blue-500/10">
+                            <Activity size={22} strokeWidth={1.5} />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold tracking-tight text-black">Volunteer <span className="text-[#0055ff]">Hub</span></h1>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{user?.name || 'Volunteer'}</p>
+                        </div>
                     </div>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mt-2 italic px-1">{user?.name || 'Volunteer'}</p>
                 </div>
 
-                <nav className="flex-1 mt-6">
+                <nav className="flex-1 mt-6 px-4">
                     <SidebarLink to="/volunteer" icon={LayoutGrid} label="Dashboard" />
-                    <SidebarLink to="/volunteer/enroll" icon={UserPlus} label="New Registration" />
+                    <SidebarLink to="/volunteer/enroll" icon={UserPlus} label="Add Student" />
                 </nav>
 
-                <div className="p-6 border-t border-white/5">
-                    <button onClick={logout} className="flex items-center gap-4 px-6 py-4 w-full rounded-2xl text-red-400 font-black uppercase tracking-widest text-[10px] hover:bg-red-500/10 transition-colors italic">
-                        <LogOut size={18} />
-                        <span>Terminate Session</span>
+                <div className="p-8 border-t border-[#D2D2D7]/30">
+                    <button onClick={logout} className="flex items-center gap-4 px-6 py-4 w-full rounded-2xl text-red-500 font-semibold text-sm hover:bg-red-50 transition-all group">
+                        <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
+                        <span>Log Out</span>
                     </button>
                 </div>
             </aside>
 
             {/* Content Area */}
-            <main className="flex-1 ml-72 p-14 min-h-screen">
+            <main className="flex-1 ml-80 p-16 min-h-screen">
                 <AnimatePresence mode="wait">
                     <Routes location={location} key={location.pathname}>
                         <Route path="/" element={<Overview />} />
@@ -77,36 +81,119 @@ const VolunteerDashboard = () => {
 
 const Overview = () => {
     const [stats, setStats] = useState({ enrolledToday: 0, totalEnrolled: 0 });
+    const [students, setStudents] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        api.get('/volunteer/stats').then((res: { data: { enrolledToday: number, totalEnrolled: number } }) => setStats(res.data));
+        const fetchData = async () => {
+            try {
+                const [statsRes, studentsRes] = await Promise.all([
+                    api.get('/volunteer/stats'),
+                    api.get('/volunteer/students')
+                ]);
+                setStats(statsRes.data);
+                setStudents(studentsRes.data);
+            } catch (err) {
+                console.error("Data fetch failed", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+        
+        // Refresh every 30 seconds for real-time status updates
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     return (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
-            <SectionHeader title="Staff" highlight="Perspective" />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
+            <SectionHeader title="Evaluation" highlight="Overview" />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white border border-slate-200 p-8 rounded-[2.5rem] shadow-sm hover:shadow-blue-500/5 transition-all group">
-                    <div className="p-4 bg-blue-50 text-[#2563eb] w-fit rounded-2xl mb-6 group-hover:scale-110 transition-transform"><Activity size={28} /></div>
-                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">Cycle Enrolment</p>
-                    <h3 className="text-4xl font-black text-slate-900 tracking-tighter">{stats.enrolledToday}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="bg-white border border-[#D2D2D7]/30 p-10 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:shadow-black/5 transition-all duration-500 group">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-[#86868B] text-sm font-semibold tracking-tight mb-2 uppercase">Students Evaluated</p>
+                            <h3 className="text-5xl font-bold text-black tracking-tight">{stats.enrolledToday}</h3>
+                        </div>
+                        <div className="p-4 bg-gradient-to-br from-[#0055ff] to-[#9d00ff] text-white w-fit rounded-[1.25rem] group-hover:scale-110 transition-transform duration-500 shadow-lg shadow-blue-500/10">
+                            <Activity size={24} strokeWidth={1.5} />
+                        </div>
+                    </div>
                 </div>
-                <div className="bg-white border border-slate-200 p-8 rounded-[2.5rem] shadow-sm hover:shadow-blue-500/5 transition-all group">
-                    <div className="p-4 bg-indigo-50 text-indigo-600 w-fit rounded-2xl mb-6 group-hover:scale-110 transition-transform"><Users size={28} /></div>
-                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">Total Managed</p>
-                    <h3 className="text-4xl font-black text-slate-900 tracking-tighter">{stats.totalEnrolled}</h3>
+                <div className="bg-white border border-[#D2D2D7]/30 p-10 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:shadow-black/5 transition-all duration-500 group">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-[#86868B] text-sm font-semibold tracking-tight mb-2 uppercase">Total Students Assigned</p>
+                            <h3 className="text-5xl font-bold text-black tracking-tight">{stats.totalEnrolled}</h3>
+                        </div>
+                        <div className="p-4 bg-[#F5F5F7] text-black w-fit rounded-[1.25rem] group-hover:scale-110 transition-transform duration-500">
+                            <Users size={24} strokeWidth={1.5} />
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="bg-[#2563eb] rounded-[3rem] p-12 text-white shadow-2xl shadow-blue-200 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-12 text-white/5 opacity-40 group-hover:rotate-12 transition-transform scale-150 pointer-events-none">
-                    <PlusCircle size={240} />
+            <div className="bg-white border border-[#D2D2D7]/30 rounded-[3rem] shadow-sm overflow-hidden p-4">
+                <div className="p-10 border-b border-[#D2D2D7]/20 flex items-center justify-between">
+                    <div>
+                        <h3 className="text-2xl font-bold text-black tracking-tight">Assigned Students</h3>
+                        <p className="text-xs text-[#86868B] font-semibold uppercase tracking-widest mt-1">Live Status Monitoring</p>
+                    </div>
+                    <div className="p-3 bg-blue-50 text-[#0055ff] rounded-xl">
+                        <Activity size={20} />
+                    </div>
                 </div>
-                <div className="relative z-10">
-                    <h3 className="text-2xl font-black mb-4 uppercase tracking-tight italic">Resource <span className="opacity-60">Allocation</span></h3>
-                    <p className="text-blue-100/80 text-sm mb-10 max-w-lg font-medium leading-relaxed">Identity verification and initial module registration for candidates. Ensure all metadata is accurate prior to Executive Audit.</p>
-                    <Link to="/volunteer/enroll" className="inline-flex items-center gap-4 bg-white text-[#2563eb] px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-[11px] hover:bg-blue-50 transition-all shadow-xl shadow-blue-900/20 active:scale-95">Enroll New Candidate <ChevronRight size={18} /></Link>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="border-b border-[#D2D2D7]/10">
+                                <th className="w-24 pl-12 py-8 text-[11px] font-bold text-[#86868B] uppercase tracking-[0.15em]">S.No</th>
+                                <th className="py-8 text-[11px] font-bold text-[#86868B] uppercase tracking-[0.15em]">Student Name </th>
+                                <th className="py-8 text-[11px] font-bold text-[#86868B] uppercase tracking-[0.15em]">Department</th>
+                                <th className="py-8 text-[11px] font-bold text-[#86868B] uppercase tracking-[0.15em] text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#D2D2D7]/10">
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={4} className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest animate-pulse italic text-xs">
+                                        Synchronizing Data Layers...
+                                    </td>
+                                </tr>
+                            ) : students.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="py-20 text-center text-[#86868B] font-medium text-sm italic">
+                                        No Students registered under your assigned protocol.
+                                    </td>
+                                </tr>
+                            ) : (
+                                students.map((s, i) => (
+                                    <tr key={s.id} className="group hover:bg-[#FBFBFD] transition-all duration-300">
+                                        <td className="pl-12 py-10 text-[#86868B] font-medium text-sm">{(i + 1).toString().padStart(2, '0')}</td>
+                                        <td className="py-10">
+                                            <div className="font-bold text-black tracking-tight text-[16px]">{s.name}</div>
+                                            <div className="text-[11px] font-semibold text-[#86868B] mt-1 uppercase tracking-widest">{s.register_number}</div>
+                                        </td>
+                                        <td className="py-10">
+                                            <span className="text-[12px] font-bold text-[#0055ff] bg-blue-50/50 px-4 py-2 rounded-full border border-blue-100/50 whitespace-nowrap">
+                                                {s.department || 'General'}
+                                            </span>
+                                        </td>
+                                        <td className="py-10 text-center">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${s.evaluation_status === 'COMPLETED' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.5)]'}`} />
+                                                <span className={`text-[10px] font-black uppercase tracking-widest ${s.evaluation_status === 'COMPLETED' ? 'text-green-600' : 'text-orange-600'}`}>
+                                                    {s.evaluation_status === 'COMPLETED' ? 'Evaluated' : 'Awaiting HR Evaluation'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </motion.div>
@@ -114,44 +201,81 @@ const Overview = () => {
 };
 
 const EnrollStudent = () => {
-    const [formData, setFormData] = useState({ name: '', register_number: '', department: '', section: '', resume_url: '' });
+    const [formData, setFormData] = useState({ name: '', register_number: '', department: '', resume_url: '' });
+
+    const departments = [
+        "Computer Science",
+        "Information Technology",
+        "Artificial intelligence and Data Science",
+        "Electronics and Communication Engineering",
+        "Electrical and Electronics Engineering",
+        "Civil Engineering",
+        "Chemical Egineering",
+        "Mechanical and Automation Engineering",
+        "Mechanical Engineering",
+        "Automobile Engineering",
+        "Biotechnology"
+    ];
+
+    const isValidDriveLink = (url: string) => {
+        if (!url) return true;
+        return /^https:\/\/(drive\.google\.com|docs\.google\.com)\/.+/i.test(url);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (formData.resume_url && !isValidDriveLink(formData.resume_url)) {
+            alert('Please enter a valid Google Drive link.');
+            return;
+        }
         try {
             await api.post('/volunteer/enroll', formData);
-            alert('Candidate identity successfully registered.');
-            setFormData({ name: '', register_number: '', department: '', section: '', resume_url: '' });
+            alert('Student identity successfully registered.');
+            setFormData({ name: '', register_number: '', department: '', resume_url: '' });
         } catch { alert('Enrolment protocol failed.'); }
     };
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
-            <SectionHeader title="Candidate" highlight="Enrolment" />
-            <div className="bg-white border border-slate-200 rounded-[3rem] p-12 shadow-sm">
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Candidate Name</label>
-                        <input className="input-field h-14 italic" placeholder="Full Identity" value={formData.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })} required />
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
+            <SectionHeader title="Add" highlight="Student" />
+            <div className="bg-white border border-[#D2D2D7]/30 rounded-[3rem] p-16 shadow-sm overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-slate-50 blur-[100px] rounded-full translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+                
+                <form onSubmit={handleSubmit} className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                    <div className="space-y-3 px-2">
+                        <label className="text-[11px] font-bold text-[#86868B] uppercase tracking-[0.2em] ml-5">Student Name</label>
+                        <input className="w-full bg-[#f5f5f7] border-none rounded-2xl h-16 px-10 text-sm font-semibold placeholder-[#86868B] focus:ring-2 focus:ring-[#0055ff]/5 transition-all outline-none" placeholder="Enter Full Name" value={formData.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })} required />
                     </div>
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Register ID</label>
-                        <input className="input-field h-14 italic" placeholder="Unique Identifier" value={formData.register_number} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, register_number: e.target.value })} required />
+                    <div className="space-y-3 px-2">
+                        <label className="text-[11px] font-bold text-[#86868B] uppercase tracking-[0.2em] ml-5">Register ID (12 Digits)</label>
+                        <input className="w-full bg-[#f5f5f7] border-none rounded-2xl h-16 px-10 text-sm font-semibold placeholder-[#86868B] focus:ring-2 focus:ring-[#0055ff]/5 transition-all outline-none" placeholder="e.g. 212723060190" value={formData.register_number} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, register_number: e.target.value })} required />
                     </div>
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Specialization</label>
-                        <input className="input-field h-14 italic" placeholder="e.g. Computer Science" value={formData.department} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, department: e.target.value })} required />
+                    <div className="space-y-3 px-2">
+                        <label className="text-[11px] font-bold text-[#86868B] uppercase tracking-[0.2em] ml-5">Department</label>
+                        <select 
+                            className="w-full bg-[#f5f5f7] border-none rounded-2xl h-16 px-10 text-sm font-semibold text-black focus:ring-2 focus:ring-[#0055ff]/5 transition-all outline-none appearance-none" 
+                            value={formData.department} 
+                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, department: e.target.value })} 
+                            required
+                        >
+                            <option value="" disabled>Select Department</option>
+                            {departments.map(dept => (
+                                <option key={dept} value={dept}>{dept}</option>
+                            ))}
+                        </select>
                     </div>
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Section Node</label>
-                        <input className="input-field h-14 italic" placeholder="e.g. A, B, C" value={formData.section} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, section: e.target.value })} required />
+                    <div className="space-y-3 px-2">
+                        <label className="text-[11px] font-bold text-[#86868B] uppercase tracking-[0.2em] ml-5">Add Resume Link</label>
+                        <input className={`w-full bg-[#f5f5f7] border-none rounded-2xl h-16 px-10 text-sm font-semibold placeholder-[#86868B] focus:ring-2 focus:ring-[#0055ff]/5 transition-all outline-none ${formData.resume_url && !isValidDriveLink(formData.resume_url) ? 'ring-2 !ring-red-300' : ''}`} placeholder="Google Drive Link" value={formData.resume_url} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, resume_url: e.target.value })} required />
+                        {formData.resume_url && !isValidDriveLink(formData.resume_url) && (
+                            <p className="text-[10px] text-red-500 font-semibold ml-5">Only Google Drive links are accepted</p>
+                        )}
                     </div>
-                    <div className="md:col-span-2 space-y-3">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dossier Link (Cloud)</label>
-                        <input className="input-field h-14 italic" placeholder="Resume URL / Cloud Storage Link" value={formData.resume_url} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, resume_url: e.target.value })} />
-                    </div>
-                    <div className="md:col-span-2 pt-6">
-                        <button className="btn-primary w-full py-6 rounded-2xl shadow-blue-200 uppercase tracking-[0.2em] font-black italic">Finalize Enrolment</button>
+                    <div className="md:col-span-2 pt-10 px-2">
+                        <button className="w-full bg-[#0055ff] hover:bg-blue-700 text-white py-10 rounded-[2rem] shadow-xl shadow-blue-500/10 uppercase tracking-[0.25em] font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-4 group">
+                            Add Student
+                            <ChevronRight size={18} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
+                        </button>
                     </div>
                 </form>
             </div>

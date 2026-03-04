@@ -14,6 +14,40 @@ import {
 import prisma from "../lib/prisma";
 const router = express.Router();
 import z from "zod";
+// ── GET /stats ───────────────────────────────────────────────────────────────
+router.get("/stats", auth, checkRole(["VOLUNTEER"]), async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const volunteer = await prisma.volunteerProfile.findUnique({
+      where: { id: req.user.id },
+      select: { assignedHrId: true },
+    });
+
+    if (!volunteer?.assignedHrId) {
+      return res.json({ enrolledToday: 0, totalEnrolled: 0 });
+    }
+
+    const [today, total] = await Promise.all([
+      prisma.hrAssignment.count({
+        where: {
+          hrId: volunteer.assignedHrId,
+          assignedAt: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          },
+        },
+      }),
+      prisma.hrAssignment.count({
+        where: { hrId: volunteer.assignedHrId },
+      }),
+    ]);
+
+    res.json({ enrolledToday: today, totalEnrolled: total });
+  } catch (err) {
+    res.status(500).send("Server Error");
+  }
+});
+
 // ── GET /students ────────────────────────────────────────────────────────────
 
 router.get("/students", auth, checkRole(["VOLUNTEER"]), async (req, res) => {
@@ -53,6 +87,7 @@ router.get("/students", auth, checkRole(["VOLUNTEER"]), async (req, res) => {
       order: a.order,
       status: a.status,
       ...a.student,
+      register_number: a.student.registerNumber,
       evaluation_status:
         a.student.evaluations.length > 0 ? "COMPLETED" : "INCOMPLETE",
     }));
@@ -66,12 +101,12 @@ router.get("/students", auth, checkRole(["VOLUNTEER"]), async (req, res) => {
 // ── POST /student ─────────────────────────────────────────────────────────────
 
 router.post(
-  "/student",
+  "/enroll",
   auth,
   checkRole(["VOLUNTEER"]),
   validate(AddStudentSchema),
   async (req, res) => {
-    const { name, registerNumber, department, section, resumeUrl } = req.body;
+    const { name, register_number, department, section, resume_url } = req.body;
 
     try {
       if (!req.user) {
@@ -91,17 +126,17 @@ router.post(
 
       // 1️⃣ Find or create student
       let student = await prisma.student.findUnique({
-        where: { registerNumber },
+        where: { registerNumber: register_number },
       });
 
       if (!student) {
         student = await prisma.student.create({
           data: {
             name,
-            registerNumber,
+            registerNumber: register_number,
             department,
             section,
-            resumeUrl,
+            resumeUrl: resume_url,
           },
         });
       }
@@ -250,7 +285,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/api/volunteer/student",
+  path: "/api/volunteer/enroll",
   tags: ["Volunteer"],
   security: [{ bearerAuth: [] }],
   description: `

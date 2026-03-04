@@ -116,7 +116,9 @@ export type StudentSearchQuery = z.infer<typeof StudentSearchQuerySchema>;
 // ─────────────────────────────────────────────
 
 export const HrIdParamSchema = z.object({
-  hrId: uuidSchema,
+  hrId: z.string().refine((val) => val === "unassigned" || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val), {
+    message: "Must be a valid UUID or 'unassigned'"
+  }),
 });
 export type HrIdParam = z.infer<typeof HrIdParamSchema>;
 
@@ -176,6 +178,7 @@ export const AddStudentSchema = z.object({
   register_number: registerNumberSchema,
   department: z.string().min(1, "Department is required").max(100),
   section: z.string().max(10).optional(),
+  resume_url: z.string().max(1000).optional(),
 });
 export type AddStudentInput = z.infer<typeof AddStudentSchema>;
 
@@ -219,6 +222,7 @@ export const CsvStudentRowSchema = z
     name: z.string().min(1).max(255),
     department: z.string().max(100).optional(),
     section: z.string().max(10).optional(),
+    resume: z.string().max(1000).optional(),
   })
   .transform((row) => ({
     ...row,

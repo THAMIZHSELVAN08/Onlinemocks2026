@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuthStore } from '../store/useAuthStore';
-import { User, Lock, ArrowRight, Loader2, Sparkles, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { motion } from 'framer-motion';
+import Grainient from '../components/Backgrounds/Grainient';
 
 const LoginPage = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(true);
 
     const setAuth = useAuthStore((state) => state.setAuth);
     const navigate = useNavigate();
@@ -37,108 +39,120 @@ const LoginPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 relative overflow-hidden font-sans">
-            {/* Ambient Background Elements */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-100/40 blur-[120px] rounded-full" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-indigo-100/30 blur-[120px] rounded-full" />
-            </div>
-
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-                className="w-full max-w-[460px] relative z-10"
+        <div className="min-h-screen bg-[#f1f3ff] flex items-center justify-center p-6 font-sans selection:bg-blue-500/20">
+            {/* Main Bespoke Card */}
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className="w-full max-w-[1000px] h-[700px] bg-white rounded-[2.5rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.08)] flex overflow-hidden border border-white"
             >
-                {/* Branding Section */}
-                <div className="text-center mb-10">
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ duration: 0.6 }}
-                        className="mb-8"
-                    >
-                        <img
-                            src="/forese.png"
-                            alt="Forese Logo"
-                            className="w-32 mx-auto drop-shadow-lg"
+                {/* Left Side: Animated Brand Area */}
+                <div className="w-[45%] relative p-12 flex flex-col justify-between overflow-hidden m-4 rounded-[2.5rem]">
+                    {/* Background Component */}
+                    <div className="absolute inset-0 z-0 scale-110">
+                        <Grainient
+                            color1="#0055ff"
+                            color2="#9d00ff"
+                            color3="#ff0080"
+                            timeSpeed={1.5}
+                            noiseScale={1.5}
+                            grainAmount={0}
+                            zoom={0.7}
                         />
-                    </motion.div>
-                    <h1 className="text-4xl font-extrabold text-[#0f172a] tracking-tight mb-2 uppercase">
-                        Mock<span className="text-[#2563eb]"> Placements 2026</span>
-                    </h1>
+                    </div>
+                    
+
+                    <div className="relative z-10 flex-grow flex items-center">
+                        <h2 className="text-[80px] font-bold text-white leading-[0.95] tracking-tighter drop-shadow-xl">
+                            Mock Placement<br />2026
+                        </h2>
+                    </div>
+
+                    {/* Bottom Content: Branding Text */}
+                    <div className="relative z-10 text-white drop-shadow-md">
+                        <p className="text-white/80 text-[11px] font-black uppercase tracking-[0.25em] mb-3">Assessment Portal</p>
+                        <p className="text-white/70 text-sm font-medium max-w-[260px] leading-relaxed">
+                            Sharpen your skills and prepare for the real thing — right here.
+                        </p>
+                    </div>
                 </div>
 
-                {/* Login Card */}
-                <div className="bg-white/70 backdrop-blur-3xl border border-white shadow-[0_40px_80px_-20px_rgba(37,99,235,0.08)] rounded-[3.5rem] p-12 relative overflow-hidden group">
-                    <form onSubmit={handleLogin} className="space-y-8">
-                        <AnimatePresence>
-                            {error && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="p-5 bg-red-50 border border-red-100 rounded-2xl text-red-500 text-[11px] font-bold uppercase tracking-widest text-center flex items-center justify-center gap-2"
-                                >
-                                    <AlertCircle size={16} /> {error}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                {/* Right Side: Form Area */}
+                <div className="flex-1 p-16 flex flex-col justify-center">
+                    <div className="max-w-[360px] mx-auto w-full">
+                        {/* Branding: Forese Logo */}
+                        <div className="mb-10 text-center">
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mb-8 inline-block"
+                            >
+                                <img
+                                    src="/forese.png"
+                                    alt="Forese Logo"
+                                    className="h-16 w-auto mx-auto object-contain drop-shadow-sm"
+                                />
+                            </motion.div>
+                            <h1 className="text-[32px] font-semibold text-slate-900 tracking-tight">Sign in to your account</h1>
+                            <p className="text-slate-400 text-sm mt-1.5 font-medium">Enter your credentials to access the assessment portal.</p>
+                        </div>
 
-                        <div className="space-y-3">
-                            <div className="relative group/input">
-                                <User className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within/input:text-blue-500 transition-colors" />
+                        <form onSubmit={handleLogin} className="space-y-6">
+                            <div className="space-y-2.5">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Username / Register ID</label>
                                 <input
                                     type="text"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
-                                    className="input-field pl-16 h-16 bg-white"
-                                    placeholder="Username or Register ID..."
+                                    className="w-full bg-[#f8faff] border border-slate-100 rounded-xl py-4 px-5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 transition-all placeholder:text-slate-300"
+                                    placeholder="e.g. john_doe or 22CS001"
                                     required
                                 />
                             </div>
-                        </div>
 
-                        <div className="space-y-3">
-                            <div className="relative group/input">
-                                <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within/input:text-blue-500 transition-colors" />
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="input-field pl-16 h-16 bg-white"
-                                    placeholder="Enter secure password..."
-                                    required
-                                />
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between ml-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Password</label>
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full bg-[#f8faff] border border-slate-100 rounded-xl py-4 px-5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 transition-all placeholder:text-slate-300 pr-12"
+                                        placeholder="••••••••"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="pt-4">
-                            <motion.button
-                                whileHover={{ y: -4, boxShadow: "0 25px 50px -12px rgba(37, 99, 235, 0.4)" }}
-                                whileTap={{ scale: 0.98 }}
+                            {error && (
+                                <motion.div 
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="text-[10px] font-bold text-red-500 flex items-center gap-2 bg-red-50 p-3 rounded-lg border border-red-100"
+                                >
+                                    <AlertCircle size={14} /> {error}
+                                </motion.div>
+                            )}
+
+                            <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] disabled:opacity-50 text-white font-black py-6 px-8 rounded-3xl shadow-[0_20px_40px_-10px_rgba(37,99,235,0.3)] transition-all flex items-center justify-center gap-4 group/btn uppercase tracking-widest text-[11px]"
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] text-sm mt-4 flex items-center justify-center gap-2"
                             >
-                                {loading ? (
-                                    <Loader2 className="w-6 h-6 animate-spin" />
-                                ) : (
-                                    <>
-                                        <span>Log In</span>
-                                        <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
-                                    </>
-                                )}
-                            </motion.button>
-                        </div>
-                    </form>
-                </div>
-
-                <div className="mt-12 text-center">
-                    <p className="text-[#64748b] text-[10px] font-bold uppercase tracking-[0.3em] flex items-center justify-center gap-2">
-                        <Sparkles size={14} className="text-blue-500/30" />
-                        Professional Assessment Portal
-                    </p>
+                                {loading ? <Loader2 className="animate-spin" size={18} /> : <span>Sign in</span>}
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </motion.div>
         </div>

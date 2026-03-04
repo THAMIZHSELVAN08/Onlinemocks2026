@@ -43,7 +43,72 @@ router.get("/stats", auth, checkRole(["ADMIN"]), async (_req, res) => {
       prisma.hrProfile.count(),
       prisma.volunteerProfile.count(),
     ]);
-    res.json({ students, hrs, volunteers });
+
+    // Get all students with their evaluations to calculate department stats
+    const allStudents = await prisma.student.findMany({
+      include: { evaluations: { select: { id: true } } },
+    });
+
+    const deptMap: Record<string, { total: number; evaluated: number }> = {};
+    let totalEvaluated = 0;
+
+    for (const s of allStudents) {
+      const dept = s.department || 'Unknown';
+      if (!deptMap[dept]) deptMap[dept] = { total: 0, evaluated: 0 };
+      deptMap[dept].total += 1;
+      if (s.evaluations && s.evaluations.length > 0) {
+        deptMap[dept].evaluated += 1;
+        totalEvaluated += 1;
+      }
+    }
+
+    const departmentStats = Object.entries(deptMap).map(([name, data]) => ({
+      name,
+      total: data.total,
+      evaluated: data.evaluated,
+      pending: data.total - data.evaluated,
+    }));
+
+    // HR Stats
+    const hrData = await prisma.hrProfile.findMany({
+      include: {
+        user: {
+          include: {
+            hrAssignments: {
+              include: { student: { include: { evaluations: { select: { id: true } } } } },
+            },
+          },
+        },
+      },
+    });
+
+    const hrStats = hrData.map(hr => {
+      const assignments = hr.user.hrAssignments || [];
+      const total = assignments.length;
+      const evaluated = assignments.filter(a => a.student?.evaluations?.length > 0).length;
+      return {
+        name: hr.name,
+        companyName: hr.companyName,
+        total,
+        evaluated,
+        pending: total - evaluated
+      };
+    });
+
+    res.json({
+      students, // backward compatibility
+      hrs,      // backward compatibility
+      volunteers, // backward compatibility
+      overall: {
+        totalStudents: students,
+        evaluatedStudents: totalEvaluated,
+        pendingStudents: students - totalEvaluated,
+        totalHRs: hrs,
+        totalVolunteers: volunteers,
+      },
+      departmentStats,
+      hrStats
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send("Server Error");
@@ -54,33 +119,33 @@ router.get("/stats", auth, checkRole(["ADMIN"]), async (_req, res) => {
 
 router.get("/students/all", auth, checkRole(["ADMIN"]), async (_req, res) => {
   try {
-    const assignments = await prisma.hrAssignment.findMany({
+    const students = await prisma.student.findMany({
       include: {
-        student: {
+        evaluations: true,
+        assignments: {
           include: {
-            evaluations: true,
-          },
-        },
-        hr: {
-          include: {
-            hrProfile: { select: { name: true, companyName: true } },
+            hr: {
+              include: {
+                hrProfile: { select: { name: true, companyName: true } },
+              },
+            },
           },
         },
       },
-      orderBy: { assignedAt: "desc" },
+      orderBy: { name: 'asc' }
     });
 
-    const result = assignments.map((a) => ({
-      ...a.student,
-      hr_name: a.hr.hrProfile?.name ?? null,
-      hr_company: a.hr.hrProfile?.companyName ?? null,
-      status: a.status,
-      evaluation_status:
-        a.student.evaluations.length > 0 ? "COMPLETED" : "INCOMPLETE",
+    const result = students.map((s) => ({
+      ...s,
+      register_number: s.registerNumber,
+      hr_name: s.assignments[0]?.hr?.hrProfile?.name ?? "Unallocated",
+      hr_company: s.assignments[0]?.hr?.hrProfile?.companyName ?? null,
+      evaluation_status: s.evaluations.length > 0 ? "COMPLETED" : "PENDING",
     }));
 
     res.json(result);
   } catch (err) {
+    console.error(err);
     res.status(500).send("Server Error");
   }
 });
@@ -121,6 +186,7 @@ router.get(
       });
       const result = assignments.map((a) => ({
         ...a.student,
+        register_number: a.student.registerNumber,
         hr_name: a.hr.hrProfile?.name ?? null,
         hr_company: a.hr.hrProfile?.companyName ?? null,
         status: a.status,
@@ -133,6 +199,47 @@ router.get(
   },
 );
 
+router.get(
+  "/students/global",
+  auth,
+  checkRole(["ADMIN"]),
+  async (req, res) => {
+    const { query } = req.query as { query: string };
+    if (!query) return res.json([]);
+
+    try {
+      const students = await prisma.student.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { registerNumber: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        include: {
+          assignments: {
+            include: {
+              hr: {
+                include: { hrProfile: { select: { name: true } } },
+              },
+            },
+          },
+        },
+        take: 50,
+      });
+
+      const result = students.map((s) => ({
+        ...s,
+        register_number: s.registerNumber,
+        hr_name: s.assignments[0]?.hr.hrProfile?.name || "Unassigned",
+      }));
+
+      res.json(result);
+    } catch (err) {
+      res.status(500).send("Server Error");
+    }
+  },
+);
+
 // ── GET /hrs ─────────────────────────────────────────────────────────────────
 
 router.get("/hrs", auth, checkRole(["ADMIN"]), async (_req, res) => {
@@ -140,7 +247,7 @@ router.get("/hrs", auth, checkRole(["ADMIN"]), async (_req, res) => {
     const hrs = await prisma.hrProfile.findMany({
       orderBy: { name: "asc" },
       include: {
-        user: { select: { username: true } },
+        user: { select: { username: true, plainPassword: true } },
         volunteers: { select: { name: true } },
       },
     });
@@ -165,6 +272,7 @@ router.get("/hrs", auth, checkRole(["ADMIN"]), async (_req, res) => {
           volunteers: hr.volunteers.map((v) => v.name).join(", "),
           total_students: total,
           completed_students: completed,
+          plain_password: hr.user.plainPassword,
         };
       }),
     );
@@ -185,7 +293,16 @@ router.get(
   validate(HrIdParamSchema, "params"),
   async (req, res) => {
     try {
-      const { hrId } = req.params as HrIdParam;
+      const { hrId } = req.params as { hrId: string };
+      
+      if (hrId === "unassigned") {
+        const students = await prisma.student.findMany({
+          where: { assignments: { none: {} } },
+          orderBy: { name: "asc" },
+        });
+        return res.json(students.map(s => ({ ...s, register_number: s.registerNumber, status: "UNASSIGNED" })));
+      }
+
       const assignments = await prisma.hrAssignment.findMany({
         where: { hrId },
         include: { student: true },
@@ -194,6 +311,7 @@ router.get(
 
       const students = assignments.map((a) => ({
         ...a.student,
+        register_number: a.student.registerNumber,
         status: a.status,
       }));
       res.json(students);
@@ -211,7 +329,7 @@ router.get("/volunteers", auth, checkRole(["ADMIN"]), async (_req, res) => {
     const volunteers = await prisma.volunteerProfile.findMany({
       orderBy: { name: "asc" },
       include: {
-        user: { select: { username: true } },
+        user: { select: { username: true, plainPassword: true } },
         assignedHr: { select: { name: true, companyName: true } },
       },
     });
@@ -221,6 +339,7 @@ router.get("/volunteers", auth, checkRole(["ADMIN"]), async (_req, res) => {
       username: v.user.username,
       hr_name: v.assignedHr?.name ?? null,
       hr_company: v.assignedHr?.companyName ?? null,
+      plain_password: v.user.plainPassword,
     }));
 
     res.json(result);
@@ -244,49 +363,63 @@ router.post(
 
     const { studentIds, targetHrId, reason } = req.body;
     const adminId = req.user.id;
+    console.log(`Transfer request: students=${studentIds}, target=${targetHrId}`);
 
     try {
       await prisma.$transaction(async (tx) => {
+        // Get initial max order
+        const last = await tx.hrAssignment.findFirst({
+            where: { hrId: targetHrId },
+            orderBy: { order: "desc" },
+        });
+        let currentOrder = last ? last.order : 0;
+
         for (const studentId of studentIds) {
+          currentOrder++;
+          console.log(`Processing student ${studentId} -> New order ${currentOrder}`);
+          
           const assignment = await tx.hrAssignment.findFirst({
             where: { studentId },
           });
 
-          if (!assignment) continue;
+          if (assignment) {
+            // Log transfer
+            await tx.studentTransfer.create({
+              data: {
+                studentId,
+                fromHrId: assignment.hrId,
+                toHrId: targetHrId,
+                adminId,
+                transferReason: reason,
+              },
+            });
 
-          // Log transfer
-          await tx.studentTransfer.create({
-            data: {
-              studentId,
-              fromHrId: assignment.hrId,
-              toHrId: targetHrId,
-              adminId,
-              transferReason: reason,
-            },
-          });
-
-          // Get next order in target HR
-          const last = await tx.hrAssignment.findFirst({
-            where: { hrId: targetHrId },
-            orderBy: { order: "desc" },
-          });
-
-          const nextOrder = last ? last.order + 1 : 1;
-
-          // Update assignment
-          await tx.hrAssignment.update({
-            where: { id: assignment.id },
-            data: {
-              hrId: targetHrId,
-              order: nextOrder,
-              status: InterviewStatus.PENDING,
-            },
-          });
+            // Update assignment
+            await tx.hrAssignment.update({
+              where: { id: assignment.id },
+              data: {
+                hrId: targetHrId,
+                order: currentOrder,
+                status: InterviewStatus.PENDING,
+              },
+            });
+          } else {
+            // Create new assignment for unassigned student
+            await tx.hrAssignment.create({
+              data: {
+                studentId,
+                hrId: targetHrId,
+                order: currentOrder,
+                status: InterviewStatus.PENDING,
+              },
+            });
+          }
         }
       });
 
       res.json({ message: "Transfer successful" });
     } catch (err) {
+      console.error("Transfer Error:", err);
       res.status(500).send("Server Error");
     }
   },
@@ -356,17 +489,19 @@ router.post(
 
               await tx.student.upsert({
                 where: { registerNumber: regNum },
-                create: {
-                  name: row.name,
-                  registerNumber: regNum,
-                  department: row.department,
-                  section: row.section,
-                },
-                update: {
-                  name: row.name,
-                  department: row.department,
-                  section: row.section,
-                },
+                  create: {
+                    name: row.name,
+                    registerNumber: regNum,
+                    department: row.department,
+                    section: row.section,
+                    resumeUrl: row.resume,
+                  },
+                  update: {
+                    name: row.name,
+                    department: row.department,
+                    section: row.section,
+                    resumeUrl: row.resume,
+                  },
               });
             }
           });
@@ -403,7 +538,7 @@ router.post(
 
       await prisma.$transaction(async (tx) => {
         const user = await tx.user.create({
-          data: { username, passwordHash, role: "HR" },
+          data: { username, passwordHash, role: "HR", plainPassword: password },
         });
 
         await tx.hrProfile.create({
@@ -444,7 +579,7 @@ router.post(
 
       await prisma.$transaction(async (tx) => {
         const user = await tx.user.create({
-          data: { username, passwordHash, role: "VOLUNTEER" },
+          data: { username, passwordHash, role: "VOLUNTEER", plainPassword: password },
         });
         await tx.volunteerProfile.create({
           data: {
@@ -549,6 +684,128 @@ router.get(
       res.json(result._avg);
     } catch (err) {
       res.status(500).send("Server Error");
+    }
+  },
+);
+
+// ── POST /add-student ────────────────────────────────────────────────────────
+
+router.post(
+  "/add-student",
+  auth,
+  checkRole(["ADMIN"]),
+  async (req, res) => {
+    const { name, register_number, department, resume_url, hr_id } = req.body;
+
+    if (!name || !register_number || !hr_id) {
+      return res.status(400).json({ message: "Name, Register Number, and HR are required." });
+    }
+
+    try {
+      // Check if student already exists
+      let student = await prisma.student.findUnique({
+        where: { registerNumber: register_number },
+      });
+
+      if (student) {
+        // Check if already assigned to this HR
+        const existingAssignment = await prisma.hrAssignment.findFirst({
+          where: { studentId: student.id, hrId: hr_id },
+        });
+        if (existingAssignment) {
+          return res.status(400).json({ message: "Student is already assigned to this HR." });
+        }
+      } else {
+        student = await prisma.student.create({
+          data: {
+            name,
+            registerNumber: register_number,
+            department,
+            resumeUrl: resume_url,
+          },
+        });
+      }
+
+      // Get next order for this HR
+      const lastAssignment = await prisma.hrAssignment.findFirst({
+        where: { hrId: hr_id },
+        orderBy: { order: "desc" },
+      });
+      const nextOrder = lastAssignment ? lastAssignment.order + 1 : 1;
+
+      await prisma.hrAssignment.create({
+        data: {
+          hrId: hr_id,
+          studentId: student.id,
+          order: nextOrder,
+        },
+      });
+
+      res.json({ message: "Student added and assigned successfully." });
+    } catch (err) {
+      console.error(err);
+      res.status(500).send("Server Error");
+    }
+  },
+);
+
+// ── DELETE /hr/:userId ───────────────────────────────────────────────────────
+
+router.delete(
+  "/hr/:userId",
+  auth,
+  checkRole(["ADMIN"]),
+  async (req, res) => {
+    const userId = req.params.userId as string;
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Delete evaluations given by this HR
+        await tx.evaluation.deleteMany({ where: { hrId: userId } });
+        // Delete HR assignments
+        await tx.hrAssignment.deleteMany({ where: { hrId: userId } });
+        // Unassign volunteers from this HR
+        await tx.volunteerProfile.updateMany({
+          where: { assignedHrId: userId },
+          data: { assignedHrId: null },
+        });
+        // Delete transfers involving this HR
+        await tx.studentTransfer.deleteMany({
+          where: { OR: [{ fromHrId: userId }, { toHrId: userId }] },
+        });
+        // Delete feedbacks
+        await tx.feedback.deleteMany({ where: { hrId: userId } });
+        // Delete HR profile (cascades to user via schema)
+        await tx.hrProfile.delete({ where: { id: userId } });
+        // Delete user
+        await tx.user.delete({ where: { id: userId } });
+      });
+      res.json({ message: "HR deleted successfully" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Failed to delete HR" });
+    }
+  },
+);
+
+// ── DELETE /volunteer/:userId ────────────────────────────────────────────────
+
+router.delete(
+  "/volunteer/:userId",
+  auth,
+  checkRole(["ADMIN"]),
+  async (req, res) => {
+    const userId = req.params.userId as string;
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Delete volunteer profile (cascades to user via schema)
+        await tx.volunteerProfile.delete({ where: { id: userId } });
+        // Delete user
+        await tx.user.delete({ where: { id: userId } });
+      });
+      res.json({ message: "Volunteer deleted successfully" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Failed to delete volunteer" });
     }
   },
 );

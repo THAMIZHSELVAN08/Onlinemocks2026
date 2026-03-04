@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
     LayoutGrid, Users, Search, LogOut,
-    CheckCircle2, Clock, ShieldCheck, ChevronRight
+    CheckCircle2, Clock, ChevronRight, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
 import api from '../api/axios';
-import { socket } from '../api/socket';
+
+import EvaluationPage from './EvaluationPage';
+import { FileText } from 'lucide-react';
 
 /* --- UI COMPONENTS --- */
 
@@ -15,24 +17,24 @@ const SidebarLink = ({ to, icon: Icon, label }: { to: string, icon: React.Elemen
     const location = useLocation();
     const isActive = location.pathname === to;
     return (
-        <Link to={to} className="block px-4 mb-2">
-            <div className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all duration-300 ${isActive
-                ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-900/40'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+        <Link to={to} className="block mb-2">
+            <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl transition-all duration-400 ${isActive
+                ? 'bg-[#0055ff] text-white shadow-lg shadow-blue-500/20'
+                : 'text-slate-500 hover:text-black hover:bg-[#F5F5F7]/50'
                 }`}>
-                <Icon size={20} />
-                <span className="text-sm tracking-tight">{label}</span>
+                <Icon size={19} strokeWidth={isActive ? 2.5 : 1.5} />
+                <span className={`text-sm tracking-tight ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
+                {isActive && <motion.div layoutId="sidebar-accent" className="ml-auto w-1.5 h-1.5 bg-white rounded-full" />}
             </div>
         </Link>
     );
 };
 
 const SectionHeader = ({ title, highlight }: { title: string, highlight?: string }) => (
-    <div className="mb-10">
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight italic uppercase">
-            {title} <span className="text-[#2563eb]">{highlight}</span>
+    <div className="mb-12">
+        <h1 className="text-5xl font-bold text-black tracking-tight leading-tight">
+            {title} <span className="text-slate-400">{highlight}</span>
         </h1>
-        <div className="h-1 w-20 bg-[#2563eb] rounded-full mt-4" />
     </div>
 );
 
@@ -41,26 +43,30 @@ const HRDashboard = () => {
     const location = useLocation();
 
     return (
-        <div className="flex bg-[#f8fafc] min-h-screen font-sans">
+        <div className="flex bg-[#FBFBFD] min-h-screen font-sans antialiased text-[#111111]">
             {/* Sidebar */}
-            <aside className="w-72 bg-[#0f172a] flex flex-col fixed h-screen z-50 shadow-2xl">
-                <div className="p-8">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black italic">H</div>
-                        <h1 className="text-xl font-black text-white tracking-tighter uppercase whitespace-nowrap">Lead <span className="text-[#2563eb]">Executive</span></h1>
+            <aside className="w-80 bg-white/80 backdrop-blur-xl border-r border-[#D2D2D7]/30 flex flex-col fixed h-screen z-50">
+                <div className="p-10 pt-12">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="w-11 h-11 bg-gradient-to-br from-[#0055ff] to-[#9d00ff] rounded-xl flex items-center justify-center text-white font-semibold shadow-lg shadow-blue-500/10">
+                            <ShieldCheck size={22} strokeWidth={1.5} />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold tracking-tight text-black">HR <span className="text-[#0055ff]">Hub</span></h1>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{user?.name || 'Interviewer'}</p>
+                        </div>
                     </div>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mt-2 italic px-1">{user?.name || 'Interviewer'}</p>
                 </div>
 
-                <nav className="flex-1 mt-6">
-                    <SidebarLink to="/hr" icon={LayoutGrid} label="Control Hub" />
-                    <SidebarLink to="/hr/students" icon={Users} label="Candidate Pool" />
+                <nav className="flex-1 mt-6 px-4">
+                    <SidebarLink to="/hr" icon={LayoutGrid} label="Dashboard Overview" />
+                    <SidebarLink to="/hr/students" icon={Users} label="Students List" />
                 </nav>
 
-                <div className="p-6 border-t border-white/5">
-                    <button onClick={logout} className="flex items-center gap-4 px-6 py-4 w-full rounded-2xl text-red-400 font-black uppercase tracking-widest text-[10px] hover:bg-red-500/10 transition-colors italic">
-                        <LogOut size={18} />
-                        <span>Terminate Session</span>
+                <div className="p-8 border-t border-[#D2D2D7]/30">
+                    <button onClick={logout} className="flex items-center gap-4 px-6 py-4 w-full rounded-2xl text-red-500 font-semibold text-sm hover:bg-red-50 transition-all group">
+                        <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
+                        <span>Logout</span>
                     </button>
                 </div>
             </aside>
@@ -71,6 +77,7 @@ const HRDashboard = () => {
                     <Routes location={location} key={location.pathname}>
                         <Route path="/" element={<Overview />} />
                         <Route path="/students" element={<Students />} />
+                        <Route path="/evaluate/:studentId" element={<EvaluationPage />} />
                     </Routes>
                 </AnimatePresence>
             </main>
@@ -82,88 +89,19 @@ const HRDashboard = () => {
 
 const Overview = () => {
     const [stats, setStats] = useState({ total: 0, completed: 0, pending: 0 });
-    const [activeSessions, setActiveSessions] = useState<Array<{
-        studentId: string,
-        status: string,
-        progress: number,
-        lastUpdate: number
-    }>>([]);
 
     useEffect(() => {
         api.get('/hr/stats').then(res => setStats(res.data));
-
-        socket.on('update_exam_status', (data) => {
-            setActiveSessions(prev => {
-                const existing = prev.findIndex(s => s.studentId === data.studentId);
-                if (existing > -1) {
-                    const next = [...prev];
-                    next[existing] = { ...next[existing], ...data, lastUpdate: Date.now() };
-                    return next;
-                }
-                return [...prev, { ...data, lastUpdate: Date.now() }];
-            });
-        });
-
-        const cleanup = setInterval(() => {
-            setActiveSessions(prev => prev.filter(s => Date.now() - s.lastUpdate < 30000));
-        }, 10000);
-
-        return () => {
-            socket.off('update_exam_status');
-            clearInterval(cleanup);
-        };
     }, []);
 
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
-            <SectionHeader title="Operational" highlight="Overview" />
+            <SectionHeader title="Evaluation" highlight="Overview" />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <StatCard label="Total Candidates" value={stats.total} icon={Users} color="blue" />
-                <StatCard label="Audit Completed" value={stats.completed} icon={CheckCircle2} color="blue" />
-                <StatCard label="Pending Evaluation" value={stats.pending} icon={Clock} color="indigo" />
-            </div>
-
-            <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm">
-                <div className="flex items-center gap-4 mb-10">
-                    <div className="p-3 bg-blue-50 text-[#2563eb] rounded-xl"><ShieldCheck size={24} /></div>
-                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Live Calibration <span className="text-[#2563eb]">Telemetry</span></h3>
-                </div>
-
-                <div className="space-y-4">
-                    {activeSessions.length === 0 ? (
-                        <div className="p-20 text-center border-2 border-dashed border-slate-100 rounded-3xl">
-                            <p className="text-slate-300 font-bold uppercase tracking-widest text-[10px]">No active candidate modules detected</p>
-                        </div>
-                    ) : (
-                        activeSessions.map((session) => (
-                            <div key={session.studentId} className="p-6 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between group hover:border-blue-200 transition-all">
-                                <div className="flex items-center gap-6">
-                                    <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center font-black text-[#2563eb]">S</div>
-                                    <div>
-                                        <div className="font-extrabold text-slate-900 uppercase tracking-tight italic">Module Activity Detected</div>
-                                        <div className="flex items-center gap-3 mt-1">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: {session.studentId.slice(-6)}</span>
-                                            <div className="w-1 h-1 bg-slate-200 rounded-full" />
-                                            <span className={`text-[10px] font-black uppercase tracking-widest ${session.status === 'tab-switched' ? 'text-red-500' : 'text-blue-500'}`}>
-                                                {session.status === 'tab-switched' ? 'Security Anomaly' : 'Signal Active'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-10">
-                                    <div className="text-right">
-                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Module Progress</div>
-                                        <div className="w-32 h-2 bg-white rounded-full overflow-hidden border border-slate-100 shadow-inner">
-                                            <motion.div initial={{ width: 0 }} animate={{ width: `${session.progress}%` }} className="h-full bg-[#2563eb]" />
-                                        </div>
-                                    </div>
-                                    <ChevronRight className="text-slate-200 group-hover:text-[#2563eb] transition-colors" />
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
+                <StatCard label="Total Students" value={stats.total} icon={Users} />
+                <StatCard label="Completed Evaluation" value={stats.completed} icon={CheckCircle2} />
+                <StatCard label="Pending Evaluation" value={stats.pending} icon={Clock} />
             </div>
         </motion.div>
     );
@@ -175,7 +113,8 @@ const Students = () => {
         name: string,
         register_number: string,
         department: string,
-        evaluation_status: string
+        evaluation_status: string,
+        resumeUrl?: string
     }>>([]);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -184,49 +123,66 @@ const Students = () => {
     }, []);
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
-            <SectionHeader title="Candidate" highlight="Repository" />
-            <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm overflow-hidden">
-                <div className="p-8 border-b border-slate-100 bg-slate-50/30">
-                    <div className="relative w-96 group">
-                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#2563eb] transition-colors" size={20} />
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
+            <SectionHeader title="Student" highlight="List" />
+            
+            <div className="bg-white border border-[#D2D2D7]/30 rounded-[3rem] shadow-sm overflow-hidden p-4">
+                <div className="p-8 pt-10 border-b border-[#D2D2D7]/20">
+                    <div className="relative group max-w-lg">
+                        <Search className="absolute left-7 top-1/2 -translate-y-1/2 text-[#86868B] group-focus-within:text-black transition-colors" size={18} strokeWidth={2} />
                         <input
-                            className="input-field pl-16 h-14 bg-white border-white shadow-sm"
-                            placeholder="Identify Candidate Signal..."
+                            className="w-full bg-[#f5f5f7] border-none rounded-2xl h-16 pl-16 pr-8 text-sm font-semibold placeholder-[#86868B] focus:ring-2 focus:ring-black/5 transition-all outline-none"
+                            placeholder="Search by name or registration number..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full text-left">
                         <thead>
-                            <tr>
-                                <th className="w-24 pl-10">S.NO</th>
-                                <th>CANDIDATE IDENTITY</th>
-                                <th>SPECIALIZATION</th>
-                                <th className="text-center">AUDIT STATUS</th>
-                                <th className="text-right pr-10">ACTIONS</th>
+                            <tr className="border-b border-[#D2D2D7]/10">
+                                <th className="w-24 pl-12 py-8 text-[11px] font-bold text-[#86868B] uppercase tracking-[0.15em]">S.No</th>
+                                <th className="py-8 text-[11px] font-bold text-[#86868B] uppercase tracking-[0.15em]">Student Name</th>
+                                <th className="py-8 text-[11px] font-bold text-[#86868B] uppercase tracking-[0.15em]">Department</th>
+                                <th className="py-8 text-[11px] font-bold text-[#86868B] uppercase tracking-[0.15em] text-center">Resume</th>
+                                <th className="py-8 text-[11px] font-bold text-[#86868B] uppercase tracking-[0.15em] text-center">Status</th>
+                                <th className="pr-12 text-[11px] font-bold text-[#86868B] uppercase tracking-[0.15em] text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {students.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase())).map((s, i) => (
-                                <tr key={s.id} className="group hover:bg-slate-50/50 transition-all">
-                                    <td className="pl-10 text-slate-400 font-mono text-xs">{i + 1}</td>
-                                    <td>
-                                        <div className="font-extrabold text-slate-900 uppercase tracking-tight italic">{s.name}</div>
-                                        <div className="text-[10px] font-mono text-slate-400 mt-0.5">{s.register_number}</div>
+                        <tbody className="divide-y divide-[#D2D2D7]/10">
+                            {students.filter(s => (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (s.register_number || '').includes(searchTerm)).map((s, i) => (
+                                <tr key={s.id} className="group hover:bg-[#FBFBFD] transition-all duration-300">
+                                    <td className="pl-12 py-10 text-[#86868B] font-medium text-sm">{(i + 1).toString().padStart(2, '0')}</td>
+                                    <td className="py-10">
+                                        <div className="font-bold text-black tracking-tight text-[16px]">{s.name}</div>
+                                        <div className="text-[11px] font-semibold text-[#86868B] mt-1 uppercase tracking-widest">{s.register_number}</div>
                                     </td>
-                                    <td><span className="badge-blue">{s.department}</span></td>
-                                    <td className="text-center">
-                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest italic ${s.evaluation_status === 'COMPLETED' ? 'bg-blue-50 text-[#2563eb] border border-blue-100' : 'bg-slate-50 text-slate-400 border border-slate-200'
-                                            }`}>
-                                            {s.evaluation_status === 'COMPLETED' ? 'Archived' : 'Ready'}
+                                    <td className="py-10">
+                                        <span className="text-sm font-semibold text-black bg-[#F5F5F7] px-4 py-2 rounded-full border border-[#D2D2D7]/30">
+                                            {s.department || 'N/A'}
                                         </span>
                                     </td>
-                                    <td className="text-right pr-10">
-                                        <Link to={`/hr/evaluate/${s.id}`} className="inline-flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-[#2563eb] uppercase tracking-[0.2em] transition-all group/link italic">
-                                            Start Audit <ChevronRight size={14} className="group-hover/link:translate-x-1 transition-transform" />
+                                    <td className="py-10 text-center">
+                                        {s.resumeUrl ? (
+                                            <a href={s.resumeUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 px-6 py-3 bg-[#0055ff] text-white rounded-full text-[11px] font-bold uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/10 active:scale-95">
+                                                <FileText size={14} /> Resume
+                                            </a>
+                                        ) : (
+                                            <span className="text-[11px] font-bold text-[#D2D2D7] uppercase tracking-widest">Unavailable</span>
+                                        )}
+                                    </td>
+                                    <td className="py-10 text-center">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${s.evaluation_status === 'COMPLETED' ? 'bg-green-500' : 'bg-slate-300'}`} />
+                                            <span className={`text-[11px] font-bold uppercase tracking-widest ${s.evaluation_status === 'COMPLETED' ? 'text-black' : 'text-[#86868B]'}`}>
+                                                {s.evaluation_status === 'COMPLETED' ? 'Verified' : 'Pending'}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="text-right pr-12 py-10">
+                                        <Link to={`/hr/evaluate/${s.id}`} className="inline-flex items-center gap-3 px-10 py-4 bg-[#f8faff] text-[#0055ff] border border-blue-100 rounded-full text-xs font-bold uppercase tracking-widest transition-all hover:bg-[#0055ff] hover:text-white hover:border-black active:scale-95 group/btn">
+                                            Evaluate <ChevronRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
                                         </Link>
                                     </td>
                                 </tr>
@@ -239,13 +195,17 @@ const Students = () => {
     );
 };
 
-const StatCard = ({ label, value, icon: Icon, color }: { label: string, value: number, icon: React.ElementType, color: string }) => (
-    <div className="bg-white border border-slate-200 p-8 rounded-[2.5rem] shadow-sm hover:shadow-blue-500/5 transition-all group">
-        <div className={`p-4 bg-${color}-50 text-${color}-600 w-fit rounded-2xl mb-6 group-hover:scale-110 transition-transform`}>
-            <Icon size={28} />
+const StatCard = ({ label, value, icon: Icon }: { label: string, value: number, icon: React.ElementType }) => (
+    <div className="bg-white border border-[#D2D2D7]/30 p-10 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:shadow-black/5 transition-all duration-500 group">
+        <div className="flex items-start justify-between">
+            <div>
+                <p className="text-[#86868B] text-sm font-semibold tracking-tight mb-2 uppercase">{label}</p>
+                <h3 className="text-5xl font-bold text-black tracking-tight">{value}</h3>
+            </div>
+            <div className={`p-4 bg-[#F5F5F7] text-black w-fit rounded-[1.25rem] group-hover:scale-110 transition-transform duration-500`}>
+                <Icon size={24} strokeWidth={1.5} />
+            </div>
         </div>
-        <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">{label}</p>
-        <h3 className="text-4xl font-black text-slate-900 tracking-tighter">{value}</h3>
     </div>
 );
 

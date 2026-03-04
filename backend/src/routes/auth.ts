@@ -46,13 +46,40 @@ router.post("/login", async (req, res) => {
       { expiresIn: "24h" },
     );
 
+    const userData: any = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+    };
+
+    if (user.role === "STUDENT") {
+      const student = await prisma.student.findUnique({
+        where: { id: user.id },
+        include: {
+          assignments: {
+            where: { status: "PENDING" },
+            orderBy: { assignedAt: "desc" },
+            take: 1,
+          },
+        },
+      });
+      if (student) {
+        userData.name = student.name;
+        userData.current_hr_id = student.assignments[0]?.hrId || null;
+      }
+    } else if (user.role === "HR") {
+      const hr = await prisma.hrProfile.findUnique({ where: { id: user.id } });
+      if (hr) userData.name = hr.name;
+    } else if (user.role === "VOLUNTEER") {
+      const vol = await prisma.volunteerProfile.findUnique({
+        where: { id: user.id },
+      });
+      if (vol) userData.name = vol.name;
+    }
+
     res.json({
       token,
-      user: {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-      },
+      user: userData,
     });
   } catch (err) {
     console.error(err);
