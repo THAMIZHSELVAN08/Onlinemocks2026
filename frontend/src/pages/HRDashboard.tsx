@@ -397,12 +397,15 @@ export default function HRDashboard() {
                                            )}
                                         </td>
                                         <td className="pr-8 py-5 text-right">
-                                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                             {s.status !== 'COMPLETED' && (
-                                               <button onClick={(e) => { e.stopPropagation(); navigate(`/hr/evaluate/${s.id}`); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Star size={16} /></button>
-                                             )}
-                                             <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"><MoreHorizontal size={16} /></button>
-                                          </div>
+                                           <div className="flex justify-end items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                              {s.status !== 'COMPLETED' && (
+                                                <>
+                                                  <button onClick={(e) => { e.stopPropagation(); navigate(`/hr/evaluate/${s.id}`); }} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/10 active:scale-95">Evaluate</button>
+                                                  <button onClick={(e) => { e.stopPropagation(); handleNoShow(s.assignmentId); }} className="p-2 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-slate-100 rounded-xl transition-all" title="Mark No-Show"><X size={14} strokeWidth={3} /></button>
+                                                </>
+                                              )}
+                                              <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-all"><MoreHorizontal size={14} /></button>
+                                           </div>
                                        </td>
                                     </tr>
                                  ))}
