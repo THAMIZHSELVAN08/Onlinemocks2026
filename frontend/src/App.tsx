@@ -3,6 +3,7 @@ import { useAuthStore } from './store/useAuthStore';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import HRDashboard from './pages/HRDashboard';
+import EvaluationPage from './pages/EvaluationPage';
 import StudentDashboard from './pages/StudentDashboard';
 import VolunteerDashboard from './pages/VolunteerDashboard';
 import './App.css';
@@ -19,6 +20,10 @@ function App() {
           <Route
             path="/admin/*"
             element={user?.role === 'ADMIN' ? <AdminDashboard /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/hr/evaluate/:studentId"
+            element={user?.role === 'HR' ? <EvaluationPage /> : <Navigate to="/login" />}
           />
           <Route
             path="/hr/*"

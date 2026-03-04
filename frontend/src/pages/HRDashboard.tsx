@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   Star,
-  Check,
   X,
   Users,
   Clock,
@@ -44,15 +44,7 @@ interface StudentWithAssignment {
   evaluation_status: string;
 }
 
-interface EvaluationRatings {
-  appearanceAttitude: number;
-  managerialAptitude: number;
-  generalAwareness: number;
-  technicalKnowledge: number;
-  communicationSkills: number;
-  ambition: number;
-  selfConfidence: number;
-}
+
 
 interface FeedbackFormState {
   technicalKnowledge: number;
@@ -146,151 +138,11 @@ function RatingMatrix({
   );
 }
 
-function SummaryCard({ title, value, subtext, icon: Icon }: any) {
-  return (
-    <div className="bg-white p-7 rounded-[24px] shadow-sm border border-slate-100 relative group hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-4">
-        <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-          {title} <Info size={12} className="text-slate-300" />
-        </h4>
-        <div className="text-slate-300 group-hover:text-slate-900 transition-colors">
-          <MoreHorizontal size={18} />
-        </div>
-      </div>
-      <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-4xl font-black text-slate-900 tracking-tight">{value}</span>
-      </div>
-      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
-        {subtext} <span className="text-lg leading-none">→</span>
-      </div>
-    </div>
-  );
-}
-
-// ─── Modals ───────────────────────────────────────────────────────────────────
-
-function EvaluateModal({
-  student,
-  onClose,
-  onSubmit,
-}: {
-  student: StudentWithAssignment;
-  onClose: () => void;
-  onSubmit: (data: any) => void;
-}) {
-  const [ratings, setRatings] = useState<EvaluationRatings>({
-    appearanceAttitude: 0,
-    managerialAptitude: 0,
-    generalAwareness: 0,
-    technicalKnowledge: 0,
-    communicationSkills: 0,
-    ambition: 0,
-    selfConfidence: 0,
-  });
-  const [strengths, setStrengths] = useState("");
-  const [improvements, setImprovements] = useState("");
-  const [comments, setComments] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const allRated = Object.values(ratings).every((v) => v > 0);
-  const overallScore = allRated
-    ? parseFloat((Object.values(ratings).reduce((a, b) => a + b, 0) / 7).toFixed(2))
-    : 0;
-
-  const handleSubmit = async () => {
-    if (!allRated || isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      await api.post("/hr/evaluate", {
-        studentId: student.id,
-        criteria: ratings,
-        strengths,
-        improvements,
-        comments,
-        overallScore,
-      });
-      onSubmit(student.id);
-    } catch (err) {
-      alert("Evaluation submission failed.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-xl`}>
-              {student.name[0]}
-            </div>
-            <div>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">{student.name}</h2>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{student.register_number}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-            <X className="w-5 h-5 text-slate-400" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-8 pt-0">
-          <div className="mt-8 mb-4">
-             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Assessment Matrix</h3>
-             <div className="space-y-1">
-                <RatingMatrix label="Appearance & Attitude" value={ratings.appearanceAttitude} onChange={(v) => setRatings(p => ({ ...p, appearanceAttitude: v }))} />
-                <RatingMatrix label="Managerial Aptitude" value={ratings.managerialAptitude} onChange={(v) => setRatings(p => ({ ...p, managerialAptitude: v }))} />
-                <RatingMatrix label="General Awareness" value={ratings.generalAwareness} onChange={(v) => setRatings(p => ({ ...p, generalAwareness: v }))} />
-                <RatingMatrix label="Technical Knowledge" value={ratings.technicalKnowledge} onChange={(v) => setRatings(p => ({ ...p, technicalKnowledge: v }))} />
-                <RatingMatrix label="Communication Skills" value={ratings.communicationSkills} onChange={(v) => setRatings(p => ({ ...p, communicationSkills: v }))} />
-                <RatingMatrix label="Ambition Scale" value={ratings.ambition} onChange={(v) => setRatings(p => ({ ...p, ambition: v }))} />
-                <RatingMatrix label="Self-Confidence" value={ratings.selfConfidence} onChange={(v) => setRatings(p => ({ ...p, selfConfidence: v }))} />
-             </div>
-          </div>
-
-          <div className="space-y-6 mt-8">
-             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Audit Synthesis</h3>
-             <div className="grid grid-cols-1 gap-6">
-                <div>
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 ml-1">Candidate Strengths</label>
-                  <textarea value={strengths} onChange={(e) => setStrengths(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-medium h-24 resize-none focus:ring-4 focus:ring-blue-600/5 transition-all outline-none" placeholder="Document core operational strengths..." />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 ml-1">Areas for Optimization</label>
-                  <textarea value={improvements} onChange={(e) => setImprovements(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-medium h-24 resize-none focus:ring-4 focus:ring-blue-600/5 transition-all outline-none" placeholder="Identify vectors for professional growth..." />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 ml-1">General Executive Summary</label>
-                  <textarea value={comments} onChange={(e) => setComments(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-medium h-24 resize-none focus:ring-4 focus:ring-blue-600/5 transition-all outline-none" placeholder="Synthesis of overall candidate potential..." />
-                </div>
-             </div>
-          </div>
-        </div>
-
-        <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Audit Aggregate</span>
-            <span className="text-2xl font-black text-blue-600">{overallScore} <span className="text-slate-400 text-xs font-bold -ml-1">/ 10.0</span></span>
-          </div>
-          <button
-            onClick={handleSubmit}
-            disabled={!allRated || isSubmitting}
-            className="px-12 py-4 bg-blue-600 text-white rounded-full text-[11px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-20 shadow-xl shadow-blue-600/20 active:scale-95 flex items-center gap-3"
-          >
-            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={3} />}
-            Finalize Protocol
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function HRDashboard() {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"overview" | "students" | "feedback">("overview");
   const [stats, setStats] = useState({ total: 0, completed: 0, pending: 0 });
   const [students, setStudents] = useState<StudentWithAssignment[]>([]);
@@ -298,7 +150,6 @@ export default function HRDashboard() {
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<"ALL" | InterviewStatus>("ALL");
-  const [evaluateStudent, setEvaluateStudent] = useState<StudentWithAssignment | null>(null);
   
   // Feedback Tab State
   const [feedbackForm, setFeedbackForm] = useState<FeedbackFormState>({
@@ -334,7 +185,7 @@ export default function HRDashboard() {
   };
 
   const handleNoShow = async (assignmentId: number) => {
-    if (!confirm("Are you sure you want to mark this candidate as a No Show?")) return;
+    if (!confirm("Are you sure you want to mark this Students as a No Show?")) return;
     try {
       await api.post(`/hr/no-show/${assignmentId}`);
       fetchData();
@@ -396,7 +247,7 @@ export default function HRDashboard() {
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <LayoutGrid size={18} className="text-white" />
           </div>
-          <span className="font-bold text-slate-900 tracking-tight">Nexus HR Portal</span>
+          <span className="font-bold text-slate-900 tracking-tight">HR Portal</span>
         </div>
 
         <nav className="space-y-1">
@@ -481,15 +332,15 @@ export default function HRDashboard() {
               {activeTab === "overview" && (
                 <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <SummaryCard title="Total Candidates" value={stats.total} subtext="Directory Size" icon={Users} />
-                    <SummaryCard title="Verified Protocol" value={stats.completed} subtext="Audited Targets" icon={CheckCircle2} />
-                    <SummaryCard title="Awaiting Audit" value={stats.pending} subtext="Audit Backlog" icon={Clock} />
+                    <SummaryCard title="Total Students" value={stats.total} subtext="Directory Size" icon={Users} />
+                    <SummaryCard title="Completed Evaluation" value={stats.completed} subtext="Audited Targets" icon={CheckCircle2} />
+                    <SummaryCard title="Awaiting Evaluation" value={stats.pending} subtext="Audit Backlog" icon={Clock} />
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                      <div className="lg:col-span-2 bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
                         <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0">
-                           <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Active Audit Sequence</h3>
+                           <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest">Active Evaluation Sequence</h3>
                            <button onClick={() => setActiveTab("students")} className="text-[11px] font-bold text-blue-600 hover:text-blue-700 underline underline-offset-4 tracking-tight uppercase">View Directory →</button>
                         </div>
                         
@@ -497,9 +348,10 @@ export default function HRDashboard() {
                            <table className="w-full text-left">
                               <thead>
                                  <tr className="bg-slate-50/50">
-                                    <th className="pl-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Candidate</th>
-                                    <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                    <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</th>
+                                    <th className="pl-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Students</th>
+                                    <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Protocol Status</th>
+                                    <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Department</th>
+                                    <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
                                     <th className="pr-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
                                  </tr>
                               </thead>
@@ -517,16 +369,23 @@ export default function HRDashboard() {
                                              </div>
                                           </div>
                                        </td>
-                                       <td className="py-5">
+                                       <td className="py-5 text-center">
                                           <Badge status={s.status} />
                                        </td>
-                                       <td className="py-5">
+                                       <td className="py-5 text-center">
                                           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{s.department || "General"}</span>
+                                       </td>
+                                       <td className="py-5 text-center">
+                                          {s.status === "COMPLETED" && (
+                                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-100">
+                                              <CheckCircle2 size={12} /> Finalized
+                                            </div>
+                                          )}
                                        </td>
                                        <td className="pr-8 py-5 text-right">
                                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                              {s.status !== 'COMPLETED' && (
-                                               <button onClick={(e) => { e.stopPropagation(); setEvaluateStudent(s); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Star size={16} /></button>
+                                               <button onClick={(e) => { e.stopPropagation(); navigate(`/hr/evaluate/${s.id}`); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Star size={16} /></button>
                                              )}
                                              <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"><MoreHorizontal size={16} /></button>
                                           </div>
@@ -602,11 +461,12 @@ export default function HRDashboard() {
                           <table className="w-full text-left">
                              <thead>
                                 <tr className="border-b border-slate-50 bg-slate-50/30">
-                                   <th className="pl-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Candidate Matrix</th>
-                                   <th className="py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Protocol Status</th>
-                                   <th className="py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Specialization</th>
-                                   <th className="pr-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
-                                </tr>
+                                    <th className="pl-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Students Matrix</th>
+                                    <th className="py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Protocol Status</th>
+                                    <th className="py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Specialization</th>
+                                    <th className="py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                                    <th className="pr-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
+                                 </tr>
                              </thead>
                              <tbody className="divide-y divide-slate-100">
                                 {filteredStudents.map((s) => (
@@ -625,23 +485,24 @@ export default function HRDashboard() {
                                       <td className="py-10 text-center">
                                          <Badge status={s.status} />
                                       </td>
-                                      <td className="py-10 text-center">
-                                         <span className="text-[11px] font-black text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/50 uppercase tracking-widest">{s.department || "General"}</span>
-                                      </td>
-                                      <td className="pr-10 py-10 text-right">
-                                         <div className="flex items-center justify-end gap-3">
-                                            {s.status === "COMPLETED" ? (
-                                              <div className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 shadow-sm">
-                                                <CheckCircle2 size={14} /> Finalized
-                                              </div>
-                                            ) : (
-                                              <>
-                                                <button onClick={() => setEvaluateStudent(s)} className="px-8 py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/10 active:scale-95">Evaluate</button>
-                                                <button onClick={() => handleNoShow(s.assignmentId)} className="p-3 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-slate-100 rounded-2xl transition-all" title="Mark No-Show"><X size={16} strokeWidth={3} /></button>
-                                              </>
-                                            )}
-                                         </div>
-                                      </td>
+                                       <td className="py-10 text-center">
+                                          <span className="text-[11px] font-black text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/50 uppercase tracking-widest">{s.department || "General"}</span>
+                                       </td>
+                                       <td className="py-10 text-center">
+                                          {s.status === "COMPLETED" && (
+                                            <div className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 shadow-sm">
+                                              <CheckCircle2 size={14} /> Finalized
+                                            </div>
+                                          )}
+                                       </td>
+                                       <td className="pr-10 py-10 text-right">
+                                          <div className="flex items-center justify-end gap-3">
+                                             {s.status !== "COMPLETED" && (
+                                               <button onClick={() => navigate(`/hr/evaluate/${s.id}`)} className="px-8 py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/10 active:scale-95">Evaluate</button>
+                                             )}
+                                             <button onClick={() => handleNoShow(s.assignmentId)} className="p-3 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-slate-100 rounded-2xl transition-all" title="Mark No-Show"><X size={16} strokeWidth={3} /></button>
+                                          </div>
+                                       </td>
                                    </tr>
                                 ))}
                              </tbody>
@@ -702,17 +563,7 @@ export default function HRDashboard() {
         </main>
       </div>
 
-      {/* Modals */}
-      {evaluateStudent && (
-        <EvaluateModal
-          student={evaluateStudent}
-          onClose={() => setEvaluateStudent(null)}
-          onSubmit={() => {
-            setEvaluateStudent(null);
-            fetchData();
-          }}
-        />
-      )}
+      {/* Modals removed for redirection */}
     </div>
   );
 }

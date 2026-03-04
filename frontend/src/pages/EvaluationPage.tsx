@@ -160,7 +160,7 @@ const EvaluationPage = () => {
                     <div className="space-y-8">
                         <FormTextarea 
                             required 
-                            label="Candidate Strengths"
+                            label="Students Strengths"
                             value={evaluation.strengths} 
                             onChange={(e: any) => setEvaluation(prev => ({ ...prev, strengths: e.target.value }))} 
                             placeholder="Document core operational strengths..."
@@ -177,7 +177,7 @@ const EvaluationPage = () => {
                             label="General Executive Summary"
                             value={evaluation.comments} 
                             onChange={(e: any) => setEvaluation(prev => ({ ...prev, comments: e.target.value }))} 
-                            placeholder="Synthesis of overall candidate potential..."
+                            placeholder="Synthesis of overall students potential..."
                         />
                     </div>
                 </div>
