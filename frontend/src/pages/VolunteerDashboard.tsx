@@ -6,11 +6,13 @@ import {
   Loader2,
   LayoutGrid,
   HelpCircle,
-  Info,
   ChevronDown,
   UserPlus,
   Activity,
   ChevronRight,
+  CheckCircle2,
+  Clock,
+  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "../store/useAuthStore";
@@ -29,12 +31,76 @@ function SectionHeader({ title, highlight }: { title: string; highlight?: string
   );
 }
 
+function CircularStatCard({ 
+  label, 
+  value, 
+  total, 
+  icon: Icon, 
+  colorClass, 
+  ringColorClass, 
+  iconBgClass, 
+}: { 
+  label: string; 
+  value: number; 
+  total: number; 
+  icon: any; 
+  colorClass: string;
+  ringColorClass: string;
+  iconBgClass: string;
+}) {
+  const radius = 34;
+  const circumference = 2 * Math.PI * radius;
+  const percentage = total > 0 ? (value / total) * 100 : 0;
+  const displayPercentage = label === "Total Assigned" ? 100 : percentage;
+  const strokeDashoffset = circumference - (displayPercentage / 100) * circumference;
+
+  return (
+    <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-50 flex flex-col items-center justify-center gap-4 group hover:shadow-xl hover:shadow-black/5 transition-all duration-500">
+      <div className="w-full flex justify-start">
+        <div className={`p-2 rounded-xl ${iconBgClass} ${colorClass}`}>
+          <Icon size={16} strokeWidth={3} />
+        </div>
+      </div>
+      
+      <div className="relative flex items-center justify-center my-2">
+        <svg className="w-24 h-24 transform -rotate-90">
+          <circle
+            cx="48"
+            cy="48"
+            r={radius}
+            stroke="currentColor"
+            strokeWidth="8"
+            fill="transparent"
+            className="text-slate-50"
+          />
+          <circle
+            cx="48"
+            cy="48"
+            r={radius}
+            stroke="currentColor"
+            strokeWidth="8"
+            fill="transparent"
+            strokeDasharray={circumference}
+            style={{ strokeDashoffset, transition: 'stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1)' }}
+            strokeLinecap="round"
+            className={`${ringColorClass}`}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-2xl font-black text-slate-900 tracking-tighter">{value}</span>
+        </div>
+      </div>
+
+      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+    </div>
+  );
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function VolunteerDashboard() {
   const { user, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<"overview" | "enroll">("overview");
-  const [stats, setStats] = useState({ enrolledToday: 0, totalEnrolled: 0 });
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -63,11 +129,9 @@ export default function VolunteerDashboard() {
 
   const fetchData = async () => {
     try {
-      const [statsRes, studentsRes] = await Promise.all([
-        api.get("/volunteer/stats"),
+      const [studentsRes] = await Promise.all([
         api.get("/volunteer/students")
       ]);
-      setStats(statsRes.data);
       setStudents(studentsRes.data);
     } catch (err) {
       console.error("Fetch failed", err);
@@ -163,9 +227,43 @@ export default function VolunteerDashboard() {
                 <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
                   <SectionHeader title="Evaluation" highlight="Overview" />
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
-                    <SummaryCard title="Evaluation Completed" value={stats.enrolledToday} subtext="Completed" icon={Activity} />
-                    <SummaryCard title="Total Assigned students" value={stats.totalEnrolled} subtext="Overall" icon={Users} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl">
+                    <CircularStatCard 
+                      label="Total Assigned" 
+                      value={students.length} 
+                      total={students.length} 
+                      icon={Users} 
+                      colorClass="text-indigo-600" 
+                      ringColorClass="text-indigo-500"
+                      iconBgClass="bg-indigo-50"
+                    />
+                    <CircularStatCard 
+                      label="Evaluated" 
+                      value={students.filter(s => s.evaluation_status === 'COMPLETED').length} 
+                      total={students.length} 
+                      icon={CheckCircle2} 
+                      colorClass="text-emerald-600" 
+                      ringColorClass="text-emerald-500"
+                      iconBgClass="bg-emerald-50"
+                    />
+                    <CircularStatCard 
+                      label="Pending" 
+                      value={students.filter(s => s.evaluation_status !== 'COMPLETED' && s.evaluation_status !== 'NO_SHOW').length} 
+                      total={students.length} 
+                      icon={Clock} 
+                      colorClass="text-amber-600" 
+                      ringColorClass="text-amber-400"
+                      iconBgClass="bg-amber-50"
+                    />
+                    <CircularStatCard 
+                      label="No Show" 
+                      value={students.filter(s => s.evaluation_status === 'NO_SHOW').length} 
+                      total={students.length} 
+                      icon={X} 
+                      colorClass="text-red-600" 
+                      ringColorClass="text-red-500"
+                      iconBgClass="bg-red-50"
+                    />
                   </div>
 
                   <div className="max-w-6xl bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
@@ -303,27 +401,5 @@ function SidebarLink({ active, onClick, icon: Icon, label, badge }: any) {
       {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-600 rounded-r-full" />}
       {badge && <div className="ml-auto w-1.5 h-1.5 bg-emerald-600 rounded-full shadow-[0_0_8px_rgba(5,150,105,0.4)]" />}
     </button>
-  );
-}
-
-function SummaryCard({ title, value, subtext, icon: Icon }: any) {
-  return (
-    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 relative group hover:shadow-xl hover:shadow-black/5 transition-all duration-500 overflow-hidden">
-      <div className="flex justify-between items-start mb-6 relative z-10">
-        <div className="flex flex-col gap-1">
-          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-            {title} <Info size={12} className="text-slate-200" />
-          </h4>
-          <span className="text-4xl font-black text-slate-900 tracking-tighter">{value}</span>
-        </div>
-        <div className="p-3 bg-slate-50 text-slate-400 group-hover:bg-emerald-600 group-hover:text-white rounded-2xl transition-all duration-500 shadow-sm">
-          <Icon size={20} strokeWidth={2} />
-        </div>
-      </div>
-      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 relative z-10 group-hover:text-emerald-600 transition-colors">
-        {subtext} <span className="text-lg leading-none translate-x-0 group-hover:translate-x-1 transition-transform">→</span>
-      </div>
-      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-600/5 rounded-full group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
-    </div>
   );
 }

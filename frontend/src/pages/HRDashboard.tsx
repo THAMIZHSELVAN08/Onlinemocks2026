@@ -139,13 +139,77 @@ function RatingMatrix({
   );
 }
 
+function CircularStatCard({ 
+  label, 
+  value, 
+  total, 
+  icon: Icon, 
+  colorClass, 
+  ringColorClass, 
+  iconBgClass, 
+}: { 
+  label: string; 
+  value: number; 
+  total: number; 
+  icon: any; 
+  colorClass: string;
+  ringColorClass: string;
+  iconBgClass: string;
+}) {
+  const radius = 34;
+  const circumference = 2 * Math.PI * radius;
+  const percentage = total > 0 ? (value / total) * 100 : 0;
+  const displayPercentage = label === "Total Assigned" ? 100 : percentage;
+  const strokeDashoffset = circumference - (displayPercentage / 100) * circumference;
+
+  return (
+    <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-50 flex flex-col items-center justify-center gap-4 group hover:shadow-xl hover:shadow-black/5 transition-all duration-500">
+      <div className="w-full flex justify-start">
+        <div className={`p-2 rounded-xl ${iconBgClass} ${colorClass}`}>
+          <Icon size={16} strokeWidth={3} />
+        </div>
+      </div>
+      
+      <div className="relative flex items-center justify-center my-2">
+        <svg className="w-24 h-24 transform -rotate-90">
+          <circle
+            cx="48"
+            cy="48"
+            r={radius}
+            stroke="currentColor"
+            strokeWidth="8"
+            fill="transparent"
+            className="text-slate-50"
+          />
+          <circle
+            cx="48"
+            cy="48"
+            r={radius}
+            stroke="currentColor"
+            strokeWidth="8"
+            fill="transparent"
+            strokeDasharray={circumference}
+            style={{ strokeDashoffset, transition: 'stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1)' }}
+            strokeLinecap="round"
+            className={`${ringColorClass}`}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-2xl font-black text-slate-900 tracking-tighter">{value}</span>
+        </div>
+      </div>
+
+      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+    </div>
+  );
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function HRDashboard() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"overview" | "students" | "feedback">("overview");
-  const [stats, setStats] = useState({ total: 0, completed: 0, pending: 0 });
   const [students, setStudents] = useState<StudentWithAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -172,11 +236,9 @@ export default function HRDashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, studentsRes] = await Promise.all([
-        api.get("/hr/stats"),
+      const [studentsRes] = await Promise.all([
         api.get("/hr/students")
       ]);
-      setStats(statsRes.data);
       setStudents(studentsRes.data);
     } catch (err) {
       console.error("Fetch failed", err);
@@ -234,10 +296,16 @@ export default function HRDashboard() {
     return matchesSearch && matchesFilter;
   });
 
+  const evaluatedCount = students.filter(s => s.status === 'COMPLETED').length;
+  const pendingCount = students.filter(s => s.status === 'PENDING' || s.status === 'IN_PROGRESS').length;
+  const noShowCount = students.filter(s => s.status === 'NO_SHOW').length;
+  const totalCount = students.length;
+
   const chartData = [
-    { name: "Verified", value: stats.completed, color: "#10b981" },
-    { name: "Awaiting", value: stats.pending, color: "#334155" },
-    { name: "Total", value: stats.total, color: "#CBD5E1" },
+    { name: "Evaluated", value: evaluatedCount, color: "#10B981" },
+    { name: "Pending", value: pendingCount, color: "#FBBF24" },
+    { name: "No Show", value: noShowCount, color: "#EF4444" },
+    { name: "Total", value: totalCount, color: "#CBD5E1" },
   ];
 
   return (
@@ -301,10 +369,43 @@ export default function HRDashboard() {
             <AnimatePresence mode="wait">
               {activeTab === "overview" && (
                 <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <SummaryCard title="Total Students" value={stats.total} subtext="Student" icon={Users} />
-                    <SummaryCard title="Completed Evaluation" value={stats.completed} subtext="Evaluated" icon={CheckCircle2} />
-                    <SummaryCard title="Awaiting Evaluation" value={stats.pending} subtext="Pending" icon={Clock} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl">
+                    <CircularStatCard 
+                      label="Total Assigned" 
+                      value={students.length} 
+                      total={students.length} 
+                      icon={Users} 
+                      colorClass="text-indigo-600" 
+                      ringColorClass="text-indigo-500"
+                      iconBgClass="bg-indigo-50"
+                    />
+                    <CircularStatCard 
+                      label="Evaluated" 
+                      value={students.filter(s => s.status === 'COMPLETED').length} 
+                      total={students.length} 
+                      icon={CheckCircle2} 
+                      colorClass="text-emerald-600" 
+                      ringColorClass="text-emerald-500"
+                      iconBgClass="bg-emerald-50"
+                    />
+                    <CircularStatCard 
+                      label="Pending" 
+                      value={students.filter(s => s.status === 'PENDING' || s.status === 'IN_PROGRESS').length} 
+                      total={students.length} 
+                      icon={Clock} 
+                      colorClass="text-amber-600" 
+                      ringColorClass="text-amber-400"
+                      iconBgClass="bg-amber-50"
+                    />
+                    <CircularStatCard 
+                      label="No Show" 
+                      value={students.filter(s => s.status === 'NO_SHOW').length} 
+                      total={students.length} 
+                      icon={X} 
+                      colorClass="text-red-600" 
+                      ringColorClass="text-red-500"
+                      iconBgClass="bg-red-50"
+                    />
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -395,7 +496,7 @@ export default function HRDashboard() {
                               </PieChart>
                            </ResponsiveContainer>
                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                              <span className="text-4xl font-black text-slate-900">{stats.completed}</span>
+                              <span className="text-4xl font-black text-slate-900">{evaluatedCount}</span>
                               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Evaluated</span>
                            </div>
                         </div>
@@ -581,27 +682,5 @@ function SidebarLink({ active, onClick, icon: Icon, label, badge }: any) {
       {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-blue-600 rounded-r-full" />}
       {badge && <div className="ml-auto w-1.5 h-1.5 bg-blue-600 rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)]" />}
     </button>
-  );
-}
-
-function SummaryCard({ title, value, subtext, icon: Icon }: any) {
-  return (
-    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 relative group hover:shadow-xl hover:shadow-black/5 transition-all duration-500 overflow-hidden">
-      <div className="flex justify-between items-start mb-6 relative z-10">
-        <div className="flex flex-col gap-1">
-          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-            {title} <Info size={12} className="text-slate-200" />
-          </h4>
-          <span className="text-4xl font-black text-slate-900 tracking-tighter">{value}</span>
-        </div>
-        <div className="p-3 bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white rounded-2xl transition-all duration-500 shadow-sm">
-          <Icon size={20} strokeWidth={2} />
-        </div>
-      </div>
-      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 relative z-10 group-hover:text-blue-600 transition-colors">
-        {subtext} <span className="text-lg leading-none translate-x-0 group-hover:translate-x-1 transition-transform">→</span>
-      </div>
-      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-blue-600/5 rounded-full group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
-    </div>
   );
 }
