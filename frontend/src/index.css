@@ -162,6 +162,34 @@ body {
   background: #cbd5e1;
 }
 
+/* Glassmorphism Utilities */
+@utility glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+@utility glass-dark {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Animation Utilities */
+@utility transition-premium {
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@utility hover-lift {
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+  }
+}
+
 /* Modern Table Reset */
 table {
   width: 100%;

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
     LayoutGrid, UserCheck, User, Send, CloudUpload, Users,
-    LogOut, Search, Building2, UserPlus, Trash2,
-    TrendingUp, ChevronRight, PieChart as PieChartIcon
+    LogOut, Search, UserPlus, Trash2,
+    TrendingUp, ChevronRight, PieChart as PieChartIcon, Clock,
+    AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -32,12 +33,13 @@ const SidebarLink = ({ to, icon: Icon, label }: { to: string, icon: any, label: 
     );
 };
 
-const SectionHeader = ({ title, highlight }: { title: string, highlight?: string }) => (
+const SectionHeader = ({ title, subtitle }: { title: string, subtitle?: string }) => (
     <div className="mb-12">
-        <h1 className="text-[40px] font-bold text-slate-900 tracking-tight leading-none mb-4">
-            {title} <span className="text-blue-600">{highlight}</span>
+        <h1 className="text-[40px] font-black text-slate-900 tracking-tight leading-none mb-3">
+            {title}
         </h1>
-        <div className="h-1.5 w-16 bg-blue-600 rounded-full" />
+        {subtitle && <p className="text-slate-500 font-medium text-[16px] tracking-tight">{subtitle}</p>}
+        <div className="h-1.5 w-12 bg-blue-600 rounded-full mt-6" />
     </div>
 );
 
@@ -50,31 +52,86 @@ const Card = ({ children, className = "" }: { children: React.ReactNode, classNa
 /* --- MAIN DASHBOARD --- */
 
 const AdminDashboard = () => {
-    const { logout, user } = useAuthStore();
+    const { logout } = useAuthStore();
     const location = useLocation();
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [confirmModal, setConfirmModal] = useState({ 
+        show: false, 
+        type: '' as 'hr' | 'volunteer', 
+        id: '', 
+        name: '' 
+    });
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const formattedDate = new Intl.DateTimeFormat('en-US', { 
+        weekday: 'short', 
+        day: 'numeric', 
+        month: 'short', 
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    }).format(currentTime);
+
+    const executeDeletion = async () => {
+        const { type, id } = confirmModal;
+        try {
+            if (type === 'hr') {
+                await api.delete(`/admin/hr/${id}`);
+                // Note: hrs state is managed in ManageHRs component, 
+                // but since it's a child and we don't have global state for it here,
+                // we'll need to handle it differently or lift state.
+                // However, the current structure has setHrs inside ManageHRs.
+                // To keep it simple, I'll refresh the page or rely on the child's local state if I can.
+                // Actually, I should lift the deletion logic or use a callback.
+                window.location.reload(); // Simplest way given current structure
+            } else if (type === 'volunteer') {
+                await api.delete(`/admin/volunteer/${id}`);
+                window.location.reload();
+            }
+        } catch {
+            alert(`Failed to delete ${type}.`);
+        } finally {
+            setConfirmModal({ show: false, type: '' as any, id: '', name: '' });
+        }
+    };
 
     return (
         <div className="flex bg-[#f8fafc] min-h-screen font-sans selection:bg-blue-500/20">
             {/* Sidebar */}
             <aside className="w-80 bg-[#020617] flex flex-col fixed h-screen z-50">
                 <div className="p-10">
-                    <div className="flex items-center gap-4 mb-1">
-                        <div className="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-600/30">A</div>
-                        <h1 className="text-[20px] font-bold text-white tracking-tight uppercase">
-                            Admin <span className="text-blue-400">Panel</span>
-                        </h1>
+                    <div className="flex items-center gap-4">
+                        <div className="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-600/30">A</div>
+                        <div>
+                            <h1 className="text-[18px] font-black text-white tracking-tight leading-none">ADMIN</h1>
+                            <p className="text-[9px] font-bold text-blue-400 uppercase tracking-[0.2em] mt-1">SaaS Logic</p>
+                        </div>
                     </div>
-                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-3 px-1 ml-0.5 opacity-80">Logged in as {user?.username || 'admin'}</p>
                 </div>
 
-                <nav className="flex-1 mt-4">
-                    <SidebarLink to="/admin" icon={LayoutGrid} label="Dashboard" />
-                    <SidebarLink to="/admin/hrs" icon={UserCheck} label="HR Management" />
-                    <SidebarLink to="/admin/volunteers" icon={Users} label="Volunteers" />
-                    <SidebarLink to="/admin/transfer" icon={Send} label="Student Transfer" />
-                    <SidebarLink to="/admin/add-student" icon={UserPlus} label="Add Student" />
-                    <SidebarLink to="/admin/uploads" icon={CloudUpload} label="Bulk Imports" />
-                    <SidebarLink to="/admin/students" icon={User} label="Students" />
+                <nav className="flex-1 space-y-8 overflow-y-auto custom-scrollbar px-4">
+                    <div>
+                        <p className="px-5 mb-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Platform Core</p>
+                        <SidebarLink to="/admin" icon={LayoutGrid} label="Dashboard" />
+                    </div>
+
+                    <div>
+                        <p className="px-5 mb-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Personnel</p>
+                        <SidebarLink to="/admin/hrs" icon={UserCheck} label="HR Management" />
+                        <SidebarLink to="/admin/volunteers" icon={Users} label="Volunteers" />
+                        <SidebarLink to="/admin/students" icon={User} label="Students" />
+                    </div>
+
+                    <div>
+                        <p className="px-5 mb-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Operations</p>
+                        <SidebarLink to="/admin/transfer" icon={Send} label="Student Transfer" />
+                        <SidebarLink to="/admin/add-student" icon={UserPlus} label="Add Student" />
+                        <SidebarLink to="/admin/uploads" icon={CloudUpload} label="Bulk Imports" />
+                    </div>
                 </nav>
 
                 <div className="px-4 pb-4 mt-auto">
@@ -93,18 +150,77 @@ const AdminDashboard = () => {
             </aside>
 
             {/* Content Area */}
-            <main className="flex-1 ml-80 p-16 min-h-screen">
-                <AnimatePresence mode="wait">
-                    <Routes location={location} key={location.pathname}>
-                        <Route path="/" element={<Overview />} />
-                        <Route path="/hrs" element={<ManageHRs />} />
-                        <Route path="/volunteers" element={<ManageVolunteers />} />
-                        <Route path="/students" element={<StudentList />} />
-                        <Route path="/transfer" element={<TransferStudents />} />
-                        <Route path="/add-student" element={<AddStudent />} />
-                        <Route path="/uploads" element={<BulkUploads />} />
-                        <Route path="/stats" element={<StatsDashboard />} />
-                    </Routes>
+            <main className="flex-1 ml-80 min-h-screen">
+                <header className="sticky top-0 z-40 bg-[#f8fafc]/80 backdrop-blur-md border-b border-slate-200/60 px-16 py-6 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Administrative Workspace</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl flex items-center gap-2 shadow-sm text-[12px] font-bold text-slate-600">
+                            <Clock size={16} className="text-slate-400" />
+                            {formattedDate}
+                        </div>
+                    </div>
+                </header>
+                
+                <div className="p-16">
+                    <AnimatePresence mode="wait">
+                        <Routes location={location} key={location.pathname}>
+                            <Route path="/" element={<Overview />} />
+                            <Route path="/hrs" element={<ManageHRs setGlobalConfirm={setConfirmModal} />} />
+                            <Route path="/volunteers" element={<ManageVolunteers setGlobalConfirm={setConfirmModal} />} />
+                            <Route path="/students" element={<StudentList />} />
+                            <Route path="/transfer" element={<TransferStudents />} />
+                            <Route path="/add-student" element={<AddStudent />} />
+                            <Route path="/uploads" element={<BulkUploads />} />
+                            <Route path="/stats" element={<StatsDashboard />} />
+                        </Routes>
+                    </AnimatePresence>
+                </div>
+
+                {/* Custom Confirmation Modal */}
+                <AnimatePresence>
+                    {confirmModal.show && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                            <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setConfirmModal({ show: false, type: '' as any, id: '', name: '' })}
+                                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                            />
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                className="relative bg-white rounded-[32px] shadow-2xl shadow-slate-900/20 w-full max-w-sm overflow-hidden"
+                            >
+                                <div className="p-8 text-center">
+                                    <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                        <AlertTriangle size={32} />
+                                    </div>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight mb-2">Confirm Delete</h3>
+                                    <p className="text-slate-500 text-sm font-medium leading-relaxed px-4">
+                                        Are you sure you want to delete <span className="text-slate-900 font-bold">{confirmModal.name}</span>? This action is <span className="text-rose-500 font-bold uppercase tracking-wider">irreversible</span>.
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+                                    <button 
+                                        onClick={() => setConfirmModal({ show: false, type: '' as any, id: '', name: '' })}
+                                        className="flex-1 px-6 py-3 rounded-2xl text-[12px] font-black text-slate-400 uppercase tracking-widest hover:bg-white hover:text-slate-600 transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        onClick={executeDeletion}
+                                        className="flex-1 px-6 py-3 bg-rose-500 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20 active:scale-95"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
                 </AnimatePresence>
             </main>
         </div>
@@ -122,31 +238,25 @@ const Overview = () => {
 
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
-            <SectionHeader title="System" highlight="Overview" />
+            <SectionHeader title="System Insights" subtitle="Global analytics and platform orchestration." />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="bg-white border border-slate-100 p-8 rounded-[36px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] group hover:shadow-[0_8px_30px_rgb(59,130,246,0.08)] transition-all duration-300">
-                    <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-                        <Users size={24} />
-                    </div>
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.15em] mb-3">Total Students</p>
-                    <h3 className="text-[52px] font-bold text-slate-900 leading-none tracking-tight">{stats.students}</h3>
+                <div className="bg-white border border-slate-200/60 p-8 rounded-[32px] shadow-sm group hover:shadow-md transition-all duration-300 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl pointer-events-none" />
+                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-4">Total Candidates</p>
+                    <h3 className="text-[44px] font-black text-slate-900 leading-none tracking-tight tabular-nums">{stats.students}</h3>
                 </div>
 
-                <div className="bg-white border border-slate-100 p-8 rounded-[36px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] group hover:shadow-[0_8px_30px_rgb(79,70,229,0.08)] transition-all duration-300">
-                    <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
-                        <UserCheck size={24} />
-                    </div>
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.15em] mb-3">HR Executives</p>
-                    <h3 className="text-[52px] font-bold text-slate-900 leading-none tracking-tight">{stats.hrs}</h3>
+                <div className="bg-white border border-slate-200/60 p-8 rounded-[32px] shadow-sm group hover:shadow-md transition-all duration-300 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl pointer-events-none" />
+                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-4">Platform HRs</p>
+                    <h3 className="text-[44px] font-black text-slate-900 leading-none tracking-tight tabular-nums">{stats.hrs}</h3>
                 </div>
 
-                <div className="bg-white border border-slate-100 p-8 rounded-[36px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] group hover:shadow-[0_8px_30px_rgb(59,130,246,0.08)] transition-all duration-300">
-                    <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-                        <Building2 size={24} />
-                    </div>
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.15em] mb-3">Volunteers</p>
-                    <h3 className="text-[52px] font-bold text-slate-900 leading-none tracking-tight">{stats.volunteers}</h3>
+                <div className="bg-white border border-slate-200/60 p-8 rounded-[32px] shadow-sm group hover:shadow-md transition-all duration-300 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl pointer-events-none" />
+                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-4">Active Volunteers</p>
+                    <h3 className="text-[44px] font-black text-slate-900 leading-none tracking-tight tabular-nums">{stats.volunteers}</h3>
                 </div>
             </div>
 
@@ -163,7 +273,7 @@ const Overview = () => {
     );
 };
 
-const ManageHRs = () => {
+const ManageHRs = ({ setGlobalConfirm }: { setGlobalConfirm: any }) => {
     const [hrs, setHrs] = useState<any[]>([]);
     const [formData, setFormData] = useState({ name: '', username: '', password: '', company_name: '' });
 
@@ -185,18 +295,13 @@ const ManageHRs = () => {
     };
 
     const handleDeleteHr = async (hrId: string, hrName: string) => {
-        if (!confirm(`Are you sure you want to delete HR "${hrName}"? This will remove all their assignments, evaluations, and feedbacks.`)) return;
-        try {
-            await api.delete(`/admin/hr/${hrId}`);
-            alert('HR deleted successfully');
-            setHrs(prev => prev.filter(h => h.id !== hrId));
-        } catch { alert('Failed to delete HR.'); }
+        setGlobalConfirm({ show: true, type: 'hr', id: hrId, name: hrName });
     };
 
     return (
         <div className="space-y-16">
             <div>
-                <SectionHeader title="HR" highlight="Management" />
+                <SectionHeader title="HR Management" subtitle="Manage and monitor HR executive accounts and company profiles." />
                 <Card className="p-12">
                     <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-10">Create a new HR account</h3>
                     <form onSubmit={handleRegister} className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
@@ -224,7 +329,7 @@ const ManageHRs = () => {
             </div>
 
             <div>
-                <SectionHeader title="HR" highlight="Details" />
+                <SectionHeader title="HR Details" subtitle="Comprehensive list of registered HR executives and their active progress." />
                 <Card className="overflow-hidden border border-slate-200/50 shadow-sm transition-all duration-300 hover:shadow-md">
                     <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
                         <table className="w-full text-left">
@@ -260,14 +365,9 @@ const ManageHRs = () => {
                                             </code>
                                         </td>
                                         <td className="pr-10 py-6 text-center">
-                                            <div className="inline-flex items-center gap-2.5 px-3 py-1.5 bg-slate-100/50 rounded-full border border-slate-200/50">
-                                                <div className="flex -space-x-1.5">
-                                                    {[...Array(3)].map((_, i) => (
-                                                        <div key={i} className={`w-1.5 h-1.5 rounded-full border border-white ${hr.completed_students > 0 ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
-                                                    ))}
-                                                </div>
-                                                <span className="text-[10px] font-extrabold text-slate-600 uppercase tracking-tighter">
-                                                    {(hr.completed_students || 0)}/{(hr.total_students || 0)} CMPLT
+                                            <div className="inline-flex items-center px-4 py-2 bg-slate-100/50 rounded-xl border border-slate-200/50">
+                                                <span className="text-[10px] font-extrabold text-slate-600 uppercase tracking-widest">
+                                                    {(hr.completed_students || 0)} / {(hr.total_students || 0)} COMPLETED
                                                 </span>
                                             </div>
                                         </td>
@@ -287,7 +387,7 @@ const ManageHRs = () => {
     );
 };
 
-const ManageVolunteers = () => {
+const ManageVolunteers = ({ setGlobalConfirm }: { setGlobalConfirm: any }) => {
     const [volunteers, setVolunteers] = useState<any[]>([]);
     const [hrs, setHrs] = useState<any[]>([]);
     const [formData, setFormData] = useState({ name: '', username: '', password: '', hrId: '' });
@@ -311,18 +411,13 @@ const ManageVolunteers = () => {
     };
 
     const handleDeleteVolunteer = async (volId: string, volName: string) => {
-        if (!confirm(`Are you sure you want to delete volunteer "${volName}"?`)) return;
-        try {
-            await api.delete(`/admin/volunteer/${volId}`);
-            alert('Volunteer deleted successfully');
-            setVolunteers(prev => prev.filter(v => v.id !== volId));
-        } catch { alert('Failed to delete volunteer.'); }
+        setGlobalConfirm({ show: true, type: 'volunteer', id: volId, name: volName });
     };
 
     return (
         <div className="space-y-16">
             <div>
-                <SectionHeader title="Volunteers" highlight="Management " />
+                <SectionHeader title="Volunteer Management" subtitle="Create and oversee support volunteer credentials." />
                 <Card className="p-12 shadow-sm border border-slate-200/50">
                     <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-10">Create a new volunteer account</h3>
                     <form onSubmit={handleRegister} className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
@@ -353,7 +448,7 @@ const ManageVolunteers = () => {
             </div>
 
             <div>
-                <SectionHeader title="Volunteers" highlight="Details" />
+                <SectionHeader title="Volunteer Details" subtitle="Directory of active support staff and their HR assignments." />
                 <Card className="overflow-hidden border border-slate-200/50 shadow-sm transition-all duration-300 hover:shadow-md">
                     <div className="overflow-x-auto max-h-[600px] custom-scrollbar">
                         <table className="w-full text-left">
@@ -421,7 +516,7 @@ const StudentList = () => {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
-            <SectionHeader title="Students" highlight="Directory" />
+            <SectionHeader title="Candidate Directory" subtitle="Centralized registry for all students across all departments." />
             <Card className="overflow-hidden">
                 <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                     <div className="relative w-full max-w-md group">
@@ -552,7 +647,7 @@ const TransferStudents = () => {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
-            <SectionHeader title="Student" highlight="Transfer" />
+            <SectionHeader title="Candidate Transfer" subtitle="Move students between HR executives for workload balancing." />
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <Card className="lg:col-span-2 p-10">
                     <div className="space-y-8 mb-10 pb-10 border-b border-slate-100/50">
@@ -612,15 +707,13 @@ const TransferStudents = () => {
                             </div>
                         ))}
                         {students.length === 0 && (selectedHrId || searchQuery) && (
-                            <div className="text-center py-20">
-                                <Users className="mx-auto text-slate-200 mb-4" size={48} />
-                                <div className="text-slate-400 font-medium tracking-tight">No results found for your query.</div>
+                            <div className="text-center py-20 border-2 border-dashed border-slate-100 rounded-3xl">
+                                <div className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No results found for your query.</div>
                             </div>
                         )}
                         {!selectedHrId && !searchQuery && (
-                            <div className="text-center py-20">
-                                <Search className="mx-auto text-slate-200 mb-4" size={48} />
-                                <div className="text-slate-400 font-medium tracking-tight italic">Enter a Value or select an HR to view students.</div>
+                            <div className="text-center py-24 border-2 border-dashed border-slate-100 rounded-3xl bg-slate-50/30">
+                                <div className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Enter a Value or select an HR to view students.</div>
                             </div>
                         )}
                     </div>
@@ -678,14 +771,11 @@ const BulkUploads = () => {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
-            <SectionHeader title="Bulk" highlight="Imports" />
+            <SectionHeader title="System Imports" subtitle="Perform mass data operations via CSV or PDF assets." />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <Card className="p-12 group">
-                    <div className="p-5 bg-blue-50 text-blue-600 w-fit rounded-2xl mb-10 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-                        <CloudUpload size={32} />
-                    </div>
-                    <h3 className="text-2xl font-bold text-slate-900 mb-4 tracking-tight">Student Import</h3>
-                    <p className="text-slate-400 text-sm mb-10">Upload a CSV file containing student names, registration numbers, and departments.</p>
+                    <h3 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Student Import</h3>
+                    <p className="text-slate-400 text-sm mb-10 font-bold">Upload a CSV file containing student names, registration numbers, and departments.</p>
 
                     <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 mb-6">
                         <p className="text-slate-500 text-xs font-mono leading-relaxed font-semibold italic uppercase tracking-tighter">Format: name, register_number, department, allocated hr, resume (Drive Link/URL)</p>
@@ -725,11 +815,8 @@ const BulkUploads = () => {
                 </Card>
 
                 <Card className="p-12 group">
-                    <div className="p-5 bg-indigo-50 text-indigo-600 w-fit rounded-2xl mb-10 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
-                        <CloudUpload size={32} />
-                    </div>
-                    <h3 className="text-2xl font-bold text-slate-900 mb-4 tracking-tight">Resume Import</h3>
-                    <p className="text-slate-400 text-sm mb-10">Upload multiple PDF resumes named after the student's registration number.</p>
+                    <h3 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Resume Import</h3>
+                    <p className="text-slate-400 text-sm mb-10 font-bold">Upload multiple PDF resumes named after the student's registration number.</p>
 
                     <div className="bg-indigo-50/30 border border-indigo-100 rounded-2xl p-6 mb-10">
                         <p className="text-indigo-600 text-xs font-mono leading-relaxed font-semibold">
@@ -808,7 +895,7 @@ const AddStudent = () => {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
-            <SectionHeader title="Add" highlight="Student" />
+            <SectionHeader title="Student Registration" subtitle="Individually onboard candidates into the platform logic." />
             <Card className="p-16">
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
                     <div className="space-y-3">
@@ -898,7 +985,7 @@ const StatsDashboard = () => {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12 pb-20">
-            <SectionHeader title="System" highlight="Statistics" />
+            <SectionHeader title="Global Performance" subtitle="High-level analytics and departmental progress monitoring." />
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <Card className="p-10 relative lg:col-span-1">
@@ -911,7 +998,7 @@ const StatsDashboard = () => {
                                 <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
                                 <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)'}} />
                                 <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold'}} />
-                                <Bar dataKey="evaluated" stackId="a" fill="#0055ff" name="Evaluated" radius={[0, 0, 8, 8]} barSize={32} />
+                                <Bar dataKey="evaluated" stackId="a" fill="#4f46e5" name="Evaluated" radius={[0, 0, 8, 8]} barSize={32} />
                                 <Bar dataKey="pending" stackId="a" fill="#e2e8f0" name="Pending" radius={[8, 8, 0, 0]} barSize={32} />
                             </BarChart>
                         </ResponsiveContainer>
@@ -931,7 +1018,7 @@ const StatsDashboard = () => {
                                     cx="50%" cy="45%" innerRadius={90} outerRadius={125} 
                                     paddingAngle={5} dataKey="value" stroke="none"
                                 >
-                                    <Cell fill="#0055ff" />
+                                    <Cell fill="#4f46e5" />
                                     <Cell fill="#cbd5e1" />
                                 </Pie>
                                 <RechartsTooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)'}} />

@@ -39,41 +39,41 @@ const LoginPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#f1f3ff] flex items-center justify-center p-6 font-sans selection:bg-blue-500/20">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans selection:bg-indigo-500/20">
             {/* Main Bespoke Card */}
             <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                className="w-full max-w-[1000px] h-[700px] bg-white rounded-[2.5rem] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.08)] flex overflow-hidden border border-white"
+                className="w-full max-w-[1100px] min-h-[700px] bg-white rounded-[3rem] shadow-[0_40px_120px_-20px_rgba(0,0,0,0.1)] flex overflow-hidden border border-slate-100"
             >
                 {/* Left Side: Animated Brand Area */}
                 <div className="w-[45%] relative p-12 flex flex-col justify-between overflow-hidden m-4 rounded-[2.5rem]">
                     {/* Background Component */}
                     <div className="absolute inset-0 z-0 scale-110">
                         <Grainient
-                            color1="#0055ff"
-                            color2="#9d00ff"
-                            color3="#ff0080"
-                            timeSpeed={1.5}
-                            noiseScale={1.5}
-                            grainAmount={0}
-                            zoom={0.7}
+                            color1="#4f46e5"
+                            color2="#0ea5e9"
+                            color3="#1e1b4b"
+                            timeSpeed={1.0}
+                            noiseScale={1.2}
+                            grainAmount={0.02}
+                            zoom={0.8}
                         />
                     </div>
                     
 
                     <div className="relative z-10 flex-grow flex items-center">
-                        <h2 className="text-[80px] font-bold text-white leading-[0.95] tracking-tighter drop-shadow-xl">
-                            Mock Placement<br />2026
+                        <h2 className="text-[72px] font-black text-white leading-[0.9] tracking-tighter italic">
+                            Mock<br /><span className="text-white/40">Placement</span><br />2026
                         </h2>
                     </div>
 
                     {/* Bottom Content: Branding Text */}
-                    <div className="relative z-10 text-white drop-shadow-md">
-                        <p className="text-white/80 text-[11px] font-black uppercase tracking-[0.25em] mb-3">Assessment Portal</p>
-                        <p className="text-white/70 text-sm font-medium max-w-[260px] leading-relaxed">
-                            Sharpen your skills and prepare for the real thing — right here.
+                    <div className="relative z-10 text-white">
+                        <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Enterprise Assessment Protocol</p>
+                        <p className="text-white/80 text-[13px] font-medium max-w-[280px] leading-relaxed italic">
+                            "Excellence is not an act, but a habit. Initialize your assessment cycle now."
                         </p>
                     </div>
                 </div>
@@ -100,34 +100,34 @@ const LoginPage = () => {
 
                         <form onSubmit={handleLogin} className="space-y-6">
                             <div className="space-y-2.5">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Username / Register ID</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Authentication ID</label>
                                 <input
                                     type="text"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
-                                    className="w-full bg-[#f8faff] border border-slate-100 rounded-xl py-4 px-5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 transition-all placeholder:text-slate-300"
-                                    placeholder="e.g. john_doe or 22CS001"
+                                    className="input-field h-14"
+                                    placeholder="Username or Register ID"
                                     required
                                 />
                             </div>
 
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between ml-1">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Password</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Secret Key</label>
                                 </div>
                                 <div className="relative">
                                     <input
                                         type={showPassword ? "text" : "password"}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full bg-[#f8faff] border border-slate-100 rounded-xl py-4 px-5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 transition-all placeholder:text-slate-300 pr-12"
+                                        className="input-field h-14 pr-12"
                                         placeholder="••••••••"
                                         required
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                                        className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
                                     >
                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
@@ -147,9 +147,9 @@ const LoginPage = () => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] text-sm mt-4 flex items-center justify-center gap-2"
+                                className="w-full h-14 bg-indigo-600 hover:bg-black text-white font-black text-[11px] uppercase tracking-[0.2em] rounded-xl shadow-xl shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-3 mt-6 italic"
                             >
-                                {loading ? <Loader2 className="animate-spin" size={18} /> : <span>Sign in</span>}
+                                {loading ? <Loader2 className="animate-spin" size={18} /> : <span>Authorize Access</span>}
                             </button>
                         </form>
                     </div>

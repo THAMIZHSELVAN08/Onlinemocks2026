@@ -13,7 +13,7 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-[#030712] text-white font-sans selection:bg-blue-900/40 selection:text-blue-400">
+      <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-indigo-500/10 selection:text-indigo-600">
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/login" element={<Navigate to="/" />} />
