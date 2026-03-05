@@ -20,6 +20,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { useAuthStore } from "../store/useAuthStore";
 import api from "../api/axios";
+import { socket } from "../api/socket";
+import { toast } from "sonner";
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
@@ -59,7 +61,32 @@ export default function VolunteerDashboard() {
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+
+    // Connect to socket for real-time notifications
+    if (user?.id) {
+      socket.connect();
+      socket.emit("join_room", { room: user.id });
+
+      socket.on("student_transferred", (data: { message: string; count: number }) => {
+        toast.success("New Student Added", {
+          description: data.message,
+        });
+        fetchData(); // auto-refresh
+      });
+
+      socket.on("admin_notification", (data: { title: string; message: string }) => {
+        toast.info(data.title, {
+          description: data.message,
+        });
+      });
+    }
+
+    return () => {
+      clearInterval(interval);
+      socket.off("student_transferred");
+      socket.off("admin_notification");
+      socket.disconnect();
+    };
   }, []);
 
   const fetchData = async () => {
@@ -122,9 +149,9 @@ export default function VolunteerDashboard() {
   const total = students.length;
 
   const chartData = [
-    { name: "Verified", value: completed, color: "#10b981" },
+    { name: "Evaluated", value: completed, color: "#10b981" },
     { name: "Pending", value: pending, color: "#334155" },
-    { name: "No Show", value: noShows, color: "#ef4444" },
+    { name: "Absent", value: noShows, color: "#ef4444" },
   ];
 
   return (
@@ -396,21 +423,21 @@ export default function VolunteerDashboard() {
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       <SummaryCard
-                        title="Total Candidates"
+                        title="Total Students"
                         value={total}
-                        subtext="Directory Size"
+                        subtext="Students Directory"
                         icon={Users}
                       />
                       <SummaryCard
-                        title="Evaluation Done"
+                        title="Evaluated"
                         value={completed}
-                        subtext="Audited Targets"
+                        subtext="Students Evaluated"
                         icon={CheckCircle2}
                       />
                       <SummaryCard
-                        title="In Progress"
+                        title="Pending"
                         value={pending}
-                        subtext="Audit Backlog"
+                        subtext="Students Pending"
                         icon={Clock}
                       />
                       <SummaryCard
@@ -435,7 +462,7 @@ export default function VolunteerDashboard() {
                               value={searchTerm}
                               onChange={(e) => setSearchTerm(e.target.value)}
                               className="w-full bg-slate-50 border-none rounded-2xl h-12 pl-12 pr-6 text-sm font-bold text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-emerald-600/5 outline-none transition-all"
-                              placeholder="Search candidates..."
+                              placeholder="Search students..."
                             />
                           </div>
                           <div className="flex flex-wrap gap-2">
@@ -525,7 +552,7 @@ export default function VolunteerDashboard() {
                             <div className="py-24 flex flex-col items-center justify-center text-slate-400 gap-4">
                               <Search size={32} strokeWidth={1.5} />
                               <p className="text-[10px] font-black uppercase tracking-[0.25em]">
-                                No matching candidates detected
+                                No matching students detected
                               </p>
                             </div>
                           )}
@@ -609,7 +636,7 @@ export default function VolunteerDashboard() {
                     <header className="mb-10">
                       <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">
                         Enroll{" "}
-                        <span className="text-emerald-600">Candidate</span>
+                        <span className="text-emerald-600">Student</span>
                       </h1>
                       <p className="text-slate-400 font-medium text-[15px]">
                         Initialize student identity for the evaluation pipeline.
@@ -626,7 +653,7 @@ export default function VolunteerDashboard() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <div className="space-y-3">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">
-                              Candidate Name
+                              Student Name
                             </label>
                             <input
                               value={formData.name}
@@ -654,7 +681,7 @@ export default function VolunteerDashboard() {
                                 }))
                               }
                               className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-6 text-sm font-bold placeholder-slate-400 focus:ring-4 focus:ring-emerald-600/5 outline-none transition-all"
-                              placeholder="12-digit SID"
+                              placeholder="Format: 212723xxxxxxx"
                               required
                             />
                           </div>

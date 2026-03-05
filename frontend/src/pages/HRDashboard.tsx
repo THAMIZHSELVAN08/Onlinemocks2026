@@ -24,6 +24,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { useAuthStore } from "../store/useAuthStore";
 import api from "../api/axios";
+import { socket } from "../api/socket";
+import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -178,6 +180,31 @@ export default function HRDashboard() {
 
   useEffect(() => {
     fetchData();
+
+    // Connect to socket for real-time notifications
+    if (user?.id) {
+      socket.connect();
+      socket.emit("join_room", { room: user.id });
+
+      socket.on("student_transferred", (data: { message: string; count: number }) => {
+        toast.success("New Student Added", {
+          description: data.message,
+        });
+        fetchData(); // auto-refresh
+      });
+
+      socket.on("admin_notification", (data: { title: string; message: string }) => {
+        toast.info(data.title, {
+          description: data.message,
+        });
+      });
+    }
+
+    return () => {
+      socket.off("student_transferred");
+      socket.off("admin_notification");
+      socket.disconnect();
+    };
   }, []);
 
   const fetchData = async () => {

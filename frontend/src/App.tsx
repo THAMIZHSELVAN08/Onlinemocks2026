@@ -6,6 +6,7 @@ import HRDashboard from './pages/HRDashboard';
 import EvaluationPage from './pages/EvaluationPage';
 import StudentDashboard from './pages/StudentDashboard';
 import VolunteerDashboard from './pages/VolunteerDashboard';
+import { Toaster } from 'sonner';
 import './App.css';
 
 function App() {
@@ -38,6 +39,15 @@ function App() {
             element={user?.role === 'STUDENT' ? <StudentDashboard /> : <Navigate to="/login" />}
           />
         </Routes>
+        <Toaster
+          position="top-center"
+          richColors
+          toastOptions={{
+            style: {
+              fontFamily: 'inherit',
+            },
+          }}
+        />
       </div>
     </Router>
   );

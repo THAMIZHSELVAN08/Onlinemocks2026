@@ -4,7 +4,7 @@ import {
     LayoutGrid, UserCheck, User, Send, CloudUpload, Users,
     LogOut, Search, UserPlus, Trash2,
     TrendingUp, ChevronRight, PieChart as PieChartIcon, Clock,
-    AlertTriangle
+    AlertTriangle, Bell, CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -131,6 +131,7 @@ const AdminDashboard = () => {
                         <SidebarLink to="/admin/transfer" icon={Send} label="Student Transfer" />
                         <SidebarLink to="/admin/add-student" icon={UserPlus} label="Add Student" />
                         <SidebarLink to="/admin/uploads" icon={CloudUpload} label="Bulk Imports" />
+                        <SidebarLink to="/admin/notifications" icon={Bell} label="Notifications" />
                     </div>
                 </nav>
 
@@ -173,6 +174,7 @@ const AdminDashboard = () => {
                             <Route path="/transfer" element={<TransferStudents />} />
                             <Route path="/add-student" element={<AddStudent />} />
                             <Route path="/uploads" element={<BulkUploads />} />
+                            <Route path="/notifications" element={<SendNotifications />} />
                             <Route path="/stats" element={<StatsDashboard />} />
                         </Routes>
                     </AnimatePresence>
@@ -1068,6 +1070,264 @@ const StatsDashboard = () => {
                     </ResponsiveContainer>
                 </div>
             </Card>
+        </motion.div>
+    );
+};
+
+const SendNotifications = () => {
+    const [hrs, setHrs] = useState<any[]>([]);
+    const [volunteers, setVolunteers] = useState<any[]>([]);
+    const [selectedHrIds, setSelectedHrIds] = useState<string[]>([]);
+    const [selectedVolunteerIds, setSelectedVolunteerIds] = useState<string[]>([]);
+    const [title, setTitle] = useState('');
+    const [message, setMessage] = useState('');
+    const [sending, setSending] = useState(false);
+    const [sentCount, setSentCount] = useState<number | null>(null);
+
+    const presetMessages = [
+        { label: 'Session Starting', title: 'Session Alert', msg: 'The evaluation session is about to begin. Please be ready at your desk.' },
+        { label: 'Break Time', title: 'Break Notification', msg: 'A short break has been scheduled. You may pause your evaluations.' },
+        { label: 'Session Ending', title: 'Session Wrap-up', msg: 'The evaluation session is ending soon. Please complete your current evaluations.' },
+        { label: 'New Students Assigned', title: 'Students Updated', msg: 'New students have been assigned to your queue. Check out the dashboard.' },
+        { label: 'Important Update', title: 'Admin Notice', msg: 'There is an important update. Please check your dashboard for more details.' },
+    ];
+
+    useEffect(() => {
+        api.get('/admin/hrs').then(res => setHrs(res.data)).catch(() => setHrs([]));
+        api.get('/admin/volunteers').then(res => setVolunteers(res.data)).catch(() => setVolunteers([]));
+    }, []);
+
+    const toggleHr = (id: string) => {
+        setSelectedHrIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+    const toggleVolunteer = (id: string) => {
+        setSelectedVolunteerIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+    const selectAllHrs = () => {
+        setSelectedHrIds(prev => prev.length === hrs.length ? [] : hrs.map(h => h.id));
+    };
+    const selectAllVolunteers = () => {
+        setSelectedVolunteerIds(prev => prev.length === volunteers.length ? [] : volunteers.map(v => v.id));
+    };
+
+    const handleSend = async () => {
+        if (!message.trim()) return;
+        if (selectedHrIds.length === 0 && selectedVolunteerIds.length === 0) return;
+        setSending(true);
+        setSentCount(null);
+        try {
+            const res = await api.post('/admin/notify', {
+                title: title.trim() || 'Admin Notification',
+                message: message.trim(),
+                hrIds: selectedHrIds,
+                volunteerIds: selectedVolunteerIds,
+            });
+            setSentCount(res.data.sent);
+            setTimeout(() => setSentCount(null), 4000);
+        } catch {
+            alert('Failed to send notification.');
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const totalSelected = selectedHrIds.length + selectedVolunteerIds.length;
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
+            <SectionHeader title="Notifications" subtitle="Send real-time messages to HR executives and volunteers." />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                {/* Compose Panel */}
+                <Card className="lg:col-span-2 p-0 overflow-visible">
+                    <div className="p-10 border-b border-slate-100">
+                        <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Compose Message</h3>
+
+                        {/* Quick Presets */}
+                        <div className="mb-8">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 ml-1">Quick Messages</p>
+                            <div className="flex flex-wrap gap-2">
+                                {presetMessages.map((p) => (
+                                    <button
+                                        key={p.label}
+                                        onClick={() => { setTitle(p.title); setMessage(p.msg); }}
+                                        className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all border ${
+                                            message === p.msg
+                                                ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20'
+                                                : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600'
+                                        }`}
+                                    >
+                                        {p.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="space-y-2.5">
+                                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest ml-1">Title</label>
+                                <input
+                                    className="input-field h-14"
+                                    placeholder="e.g. Session Alert"
+                                    value={title}
+                                    onChange={e => setTitle(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2.5">
+                                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest ml-1">Message</label>
+                                <textarea
+                                    className="input-field min-h-[120px] resize-none pt-4"
+                                    placeholder="Type your notification message here..."
+                                    value={message}
+                                    onChange={e => setMessage(e.target.value)}
+                                    rows={4}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Recipient Selection */}
+                    <div className="p-10">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* HR Selection */}
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">HR Executives</h4>
+                                    <button
+                                        onClick={selectAllHrs}
+                                        className="text-[9px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-800 transition-colors"
+                                    >
+                                        {selectedHrIds.length === hrs.length ? 'Deselect All' : 'Select All'}
+                                    </button>
+                                </div>
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                                    {hrs.map(hr => (
+                                        <div
+                                            key={hr.id}
+                                            onClick={() => toggleHr(hr.id)}
+                                            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl cursor-pointer transition-all border-2 ${
+                                                selectedHrIds.includes(hr.id)
+                                                    ? 'bg-blue-50 border-blue-500 text-blue-900'
+                                                    : 'bg-white border-slate-100 text-slate-600 hover:border-blue-200'
+                                            }`}
+                                        >
+                                            <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ${
+                                                selectedHrIds.includes(hr.id)
+                                                    ? 'bg-blue-600 border-blue-600'
+                                                    : 'border-slate-300'
+                                            }`}>
+                                                {selectedHrIds.includes(hr.id) && <CheckCircle2 size={12} className="text-white" />}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="text-[13px] font-bold truncate">{hr.name}</div>
+                                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                                                    {hr.company_name || hr.companyName}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {hrs.length === 0 && (
+                                        <p className="text-center text-slate-300 font-bold text-xs py-8 uppercase tracking-widest">No HRs found</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Volunteer Selection */}
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Volunteers</h4>
+                                    <button
+                                        onClick={selectAllVolunteers}
+                                        className="text-[9px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-800 transition-colors"
+                                    >
+                                        {selectedVolunteerIds.length === volunteers.length ? 'Deselect All' : 'Select All'}
+                                    </button>
+                                </div>
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                                    {volunteers.map(v => (
+                                        <div
+                                            key={v.id}
+                                            onClick={() => toggleVolunteer(v.id)}
+                                            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl cursor-pointer transition-all border-2 ${
+                                                selectedVolunteerIds.includes(v.id)
+                                                    ? 'bg-blue-50 border-blue-500 text-blue-900'
+                                                    : 'bg-white border-slate-100 text-slate-600 hover:border-blue-200'
+                                            }`}
+                                        >
+                                            <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ${
+                                                selectedVolunteerIds.includes(v.id)
+                                                    ? 'bg-blue-600 border-blue-600'
+                                                    : 'border-slate-300'
+                                            }`}>
+                                                {selectedVolunteerIds.includes(v.id) && <CheckCircle2 size={12} className="text-white" />}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="text-[13px] font-bold truncate">{v.name}</div>
+                                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                                                    HR: {v.hr_name || 'Unassigned'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {volunteers.length === 0 && (
+                                        <p className="text-center text-slate-300 font-bold text-xs py-8 uppercase tracking-widest">No volunteers found</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+
+                {/* Send Summary Panel */}
+                <Card className="p-10 h-fit sticky top-10 border border-slate-200/50">
+                    <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-[0.2em] mb-10">Send Summary</h3>
+
+                    <div className="space-y-6 mb-10">
+                        <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">HRs Selected</span>
+                            <span className="text-[14px] font-black text-slate-900">{selectedHrIds.length}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Volunteers Selected</span>
+                            <span className="text-[14px] font-black text-slate-900">{selectedVolunteerIds.length}</span>
+                        </div>
+                        <div className="h-px bg-slate-100" />
+                        <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Recipients</span>
+                            <span className="text-[14px] font-black text-blue-600">{totalSelected}</span>
+                        </div>
+                    </div>
+
+                    {title && (
+                        <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 mb-6">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Preview</p>
+                            <p className="text-[13px] font-black text-slate-900 mb-1">{title}</p>
+                            <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{message}</p>
+                        </div>
+                    )}
+
+                    {sentCount !== null && (
+                        <div className="flex items-center gap-2 mb-6 px-4 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                            <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">
+                                Sent to {sentCount} recipient(s)
+                            </span>
+                        </div>
+                    )}
+
+                    <button
+                        onClick={handleSend}
+                        disabled={sending || !message.trim() || totalSelected === 0}
+                        className="btn-primary w-full disabled:opacity-30 disabled:translate-y-0 disabled:shadow-none flex items-center justify-center gap-3"
+                    >
+                        {sending ? (
+                            <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Sending...</>
+                        ) : (
+                            <><Send size={16} /> Send Notification</>
+                        )}
+                    </button>
+                </Card>
+            </div>
         </motion.div>
     );
 };

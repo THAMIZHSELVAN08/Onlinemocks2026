@@ -417,6 +417,31 @@ router.post(
         }
       });
 
+      // ── Emit real-time notification to HR and their volunteers ──
+      const io = req.app.get("socketio");
+      if (io) {
+        const count = studentIds.length;
+        const payload = {
+          message: count === 1
+            ? "A new student has been added. Check out the dashboard."
+            : `${count} new students have been added. Check out the dashboard.`,
+          count,
+          timestamp: new Date().toISOString(),
+        };
+
+        // Notify the target HR
+        io.to(targetHrId).emit("student_transferred", payload);
+
+        // Notify all volunteers assigned to this HR
+        const volunteers = await prisma.volunteerProfile.findMany({
+          where: { assignedHrId: targetHrId },
+          select: { id: true },
+        });
+        for (const v of volunteers) {
+          io.to(v.id).emit("student_transferred", payload);
+        }
+      }
+
       res.json({ message: "Transfer successful" });
     } catch (err) {
       console.error("Transfer Error:", err);
@@ -424,6 +449,50 @@ router.post(
     }
   },
 );
+// ── POST /notify ─────────────────────────────────────────────────────────────
+
+router.post(
+  "/notify",
+  auth,
+  checkRole(["ADMIN"]),
+  async (req, res) => {
+    const { title, message, hrIds, volunteerIds } = req.body;
+
+    if (!message || (!hrIds?.length && !volunteerIds?.length)) {
+      return res.status(400).json({ message: "Message and at least one recipient required." });
+    }
+
+    const io = req.app.get("socketio");
+    if (!io) {
+      return res.status(500).json({ message: "Socket.io not available." });
+    }
+
+    const payload = {
+      title: title || "Admin Notification",
+      message,
+      timestamp: new Date().toISOString(),
+    };
+
+    let sent = 0;
+
+    if (hrIds?.length) {
+      for (const hrId of hrIds) {
+        io.to(hrId).emit("admin_notification", payload);
+        sent++;
+      }
+    }
+
+    if (volunteerIds?.length) {
+      for (const volId of volunteerIds) {
+        io.to(volId).emit("admin_notification", payload);
+        sent++;
+      }
+    }
+
+    res.json({ message: `Notification sent to ${sent} recipient(s).`, sent });
+  },
+);
+
 // ── POST /resumes/bulk ───────────────────────────────────────────────────────
 
 router.post(
