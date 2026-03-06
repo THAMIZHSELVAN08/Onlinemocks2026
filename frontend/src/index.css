@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
 @import "tailwindcss";
 
 @plugin "tailwindcss-animate";
@@ -15,7 +15,7 @@
   --text-muted: #64748b;
   --border: #f1f5f9;
 
-  font-family: "Geist", "Geist Sans", "SF Compact", "SF Compact Display", "SF Pro Display", system-ui, -apple-system, sans-serif;
+  font-family: "Geist", "Geist Sans", system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color: var(--text-main);
@@ -265,7 +265,8 @@ tr:hover td {
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-sans: "Geist", "Geist Sans", "SF Compact", "SF Compact Display", "SF Pro Display", sans-serif;
+  --font-sans: "Geist", "Geist Sans", sans-serif;
+  --font-mono: "Geist Mono", monospace;
 }
 
 .dark {
@@ -301,4 +302,3 @@ tr:hover td {
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
-

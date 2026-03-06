@@ -11,7 +11,6 @@ import swaggerUi from "swagger-ui-express";
 import { generateOpenAPIDocument } from "./openapi";
 const openApiDocument = generateOpenAPIDocument();
 import pipelineRoutes from "./routes/pipeline";
-import studentRoutes from "./routes/student";
 
 const app = express();
 const server = http.createServer(app);
@@ -43,16 +42,7 @@ io.on("connection", (socket) => {
     console.log(`User ${socket.id} joined room ${data.room}`);
   });
 
-  // Student sends pulse during exam
-  socket.on("exam_heartbeat", (data) => {
-    // data: { studentId, hrId, status: 'active' | 'tab-switched', progress: 0-100 }
-    io.to(data.hrId).emit("student_status_update", {
-      studentId: data.studentId,
-      status: data.status,
-      progress: data.progress,
-      lastSeen: new Date(),
-    });
-  });
+
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
@@ -65,7 +55,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/hr", hrRoutes);
 app.use("/api/volunteer", volunteerRoutes);
 app.use("/api/pipeline", pipelineRoutes);
-app.use("/api/student", studentRoutes);
 app.get("/health", (req, res) => {
   res.json({ status: "OK", timestamp: new Date() });
 });

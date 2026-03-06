@@ -1,824 +1,700 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
-  Search,
-  LogOut,
-  Loader2,
-  LayoutGrid,
-  Clock,
-  UserPlus,
-  Users,
-  CheckCircle2,
-  HelpCircle,
-  Bell,
-  Info,
-  ChevronDown,
-  PanelLeft,
-  Menu,
-  X,
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { useAuthStore } from "../store/useAuthStore";
-import api from "../api/axios";
-import { socket } from "../api/socket";
-import { toast } from "sonner";
+    LayoutGrid, UserPlus, LogOut, Users, Activity,
+    CheckCircle2, Clock, Menu, X,
+    ChevronDown, PanelLeft, User, Search, Filter,
+    HelpCircle, Bell, Star,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthStore } from '../store/useAuthStore';
+import api from '../api/axios';
+import { socket } from '../api/socket';
+import { toast } from 'sonner';
+
+interface Notification {
+  id: string;
+  title: string | null;
+  message: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+// ─── Sidebar Link ─────────────────────────────────────────────────────────────
+
+const SidebarLink = ({
+    to, icon: Icon, label, collapsed,
+}: {
+    to: string; icon: React.ElementType; label: string; collapsed: boolean;
+}) => {
+    const location = useLocation();
+    const isActive = location.pathname === to || (to !== '/volunteer' && location.pathname.startsWith(to));
+
+    return (
+        <Link to={to} className="block">
+            <div
+                title={collapsed ? label : undefined}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${collapsed ? 'justify-center' : ''} ${
+                    isActive
+                        ? 'bg-green-50 text-green-700'
+                        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                }`}
+            >
+                <Icon size={17} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
+                {!collapsed && (
+                    <span className={`text-[13px] truncate ${isActive ? 'font-semibold text-green-700' : 'font-medium'}`}>
+                        {label}
+                    </span>
+                )}
+                {!collapsed && isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-500" />}
+            </div>
+        </Link>
+    );
+};
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+
+const STAT_THEMES = [
+    { bg: 'bg-emerald-50', icon: 'bg-emerald-500', value: 'text-emerald-800', label: 'text-emerald-600' },
+    { bg: 'bg-slate-100',  icon: 'bg-slate-500',   value: 'text-slate-800',   label: 'text-slate-500'  },
+];
+
+function StatCard({ title, value, icon: Icon, themeIndex = 0 }: {
+    title: string; value: number | string; icon: React.ElementType; themeIndex?: number;
+}) {
+    const t = STAT_THEMES[themeIndex % STAT_THEMES.length];
+    return (
+        <div className={`${t.bg} rounded-2xl p-6 flex items-center gap-5`}>
+            <div className={`w-12 h-12 rounded-xl ${t.icon} flex items-center justify-center shrink-0`}>
+                <Icon size={22} className="text-white" strokeWidth={2} />
+            </div>
+            <div>
+                <p className={`text-[11px] font-semibold uppercase tracking-wider mb-1 ${t.label}`}>{title}</p>
+                <p className={`text-3xl font-bold leading-none ${t.value}`}>{value}</p>
+            </div>
+        </div>
+    );
+}
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
-export default function VolunteerDashboard() {
-  const { user, logout } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<"overview" | "enroll">("overview");
-  const [students, setStudents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileOpen, setMobileOpen] = useState(false);
+const VolunteerDashboard = () => {
+    const { logout, user } = useAuthStore();
+    const location = useLocation();
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<
-    "ALL" | "PENDING" | "COMPLETED" | "NO_SHOW"
-  >("ALL");
-  const [formData, setFormData] = useState({
-    name: "",
-    register_number: "",
-    department: "",
-    resume_url: "",
-  });
-
-  const departments = [
-    "Computer Science",
-    "Information Technology",
-    "Artificial intelligence and Data Science",
-    "Electronics and Communication Engineering",
-    "Electrical and Electronics Engineering",
-    "Civil Engineering",
-    "Chemical Egineering",
-    "Mechanical and Automation Engineering",
-    "Mechanical Engineering",
-    "Automobile Engineering",
-    "Biotechnology",
-  ];
-
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-
-    // Connect to socket for real-time notifications
-    if (user?.id) {
-      socket.connect();
-      socket.emit("join_room", { room: user.id });
-
-      socket.on("student_transferred", (data: { message: string; count: number }) => {
-        toast.success("New Student Added", {
-          description: data.message,
-        });
-        fetchData(); // auto-refresh
-      });
-
-      socket.on("admin_notification", (data: { title: string; message: string }) => {
-        toast.info(data.title, {
-          description: data.message,
-        });
-      });
-    }
-
-    return () => {
-      clearInterval(interval);
-      socket.off("student_transferred");
-      socket.off("admin_notification");
-      socket.disconnect();
+    const fetchNotifications = async () => {
+        try {
+            const res = await api.get('/volunteer/notifications');
+            setNotifications(res.data);
+        } catch (err) {
+            console.error('Failed to fetch notifications', err);
+        }
     };
-  }, []);
 
-  const fetchData = async () => {
-    try {
-      const studentsRes = await api.get("/volunteer/students");
-      setStudents(studentsRes.data);
-    } catch (err) {
-      console.error("Fetch failed", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const markAsRead = async (id: string) => {
+        try {
+            await api.patch(`/volunteer/notifications/${id}/read`);
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+        } catch (err) { console.error("Failed to mark as read", err); }
+    };
 
-  const isValidDriveLink = (url: string) => {
-    if (!url) return true;
-    return /^https:\/\/(drive\.google\.com|docs\.google\.com)\/.+/i.test(url);
-  };
+    const markAllAsRead = async () => {
+        try {
+            await api.post("/volunteer/notifications/read-all");
+            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+            toast.success("All caught up!");
+        } catch (err) { console.error("Failed to mark all as read", err); }
+    };
 
-  const handleEnrollSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.resume_url && !isValidDriveLink(formData.resume_url)) {
-      alert("Please enter a valid Google Drive link.");
-      return;
-    }
-    try {
-      await api.post("/volunteer/enroll", formData);
-      alert("Student identity successfully registered.");
-      setFormData({
-        name: "",
-        register_number: "",
-        department: "",
-        resume_url: "",
-      });
-      fetchData();
-      setActiveTab("overview");
-    } catch {
-      alert("Enrolment protocol failed.");
-    }
-  };
+    useEffect(() => {
+        fetchNotifications();
+        if (user?.id) {
+            socket.on('student_transferred', () => {
+                fetchNotifications();
+            });
+            socket.on('admin_notification', () => {
+                fetchNotifications();
+            });
+        }
+        return () => {
+            socket.off('student_transferred');
+            socket.off('admin_notification');
+        };
+    }, [user]);
 
-  const filteredStudents = students.filter((s) => {
-    const q = searchTerm.toLowerCase();
-    const matchesSearch =
-      s.name.toLowerCase().includes(q) ||
-      s.register_number.toLowerCase().includes(q);
-    const status = s.evaluation_status || s.status;
-    const matchesFilter = filterStatus === "ALL" || status === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
+    const navLabel =
+        location.pathname === '/volunteer' ? 'Dashboard' :
+        location.pathname === '/volunteer/notifications' ? 'Notifications' :
+        location.pathname.startsWith('/volunteer/enroll') ? 'Add Student' : '';
 
-  const noShows = students.filter((s) => s.status === "NO_SHOW").length;
-  const completed = students.filter(
-    (s) => s.status === "COMPLETED" || s.evaluation_status === "COMPLETED",
-  ).length;
-  const pending = students.filter(
-    (s) =>
-      (s.status === "PENDING" || s.status === "IN_PROGRESS") &&
-      s.evaluation_status !== "COMPLETED",
-  ).length;
-  const total = students.length;
+    return (
+        <div className="bg-slate-100 font-sans text-slate-900 md:p-2 flex gap-0" style={{ height: '100vh' }}>
 
-  const chartData = [
-    { name: "Evaluated", value: completed, color: "#10b981" },
-    { name: "Pending", value: pending, color: "#334155" },
-    { name: "Absent", value: noShows, color: "#ef4444" },
-  ];
+            {/* Mobile Backdrop */}
+            <AnimatePresence>
+                {mobileOpen && (
+                    <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onClick={() => setMobileOpen(false)}
+                        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm md:hidden" />
+                )}
+            </AnimatePresence>
 
-  return (
-    <div className="bg-[#F7F8FA] font-sans text-slate-900 selection:bg-emerald-600/10 selection:text-emerald-600">
-      {/* ── Mobile Backdrop ── */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setMobileOpen(false)}
-            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm md:hidden"
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── Inset Container ── */}
-      <div
-        className="relative mx-auto bg-white shadow-xl shadow-slate-200/50 flex overflow-hidden"
-        style={{ height: "100vh" }}
-      >
-        {/* ── Sidebar (desktop) ── */}
-        <aside
-          className={[
-            "flex flex-col bg-white border-r border-slate-100 transition-all duration-300 overflow-hidden z-50",
-            "hidden md:flex",
-            sidebarOpen ? "md:w-64" : "md:w-[72px]",
-          ].join(" ")}
-        >
-          <div
-            className={`flex items-center gap-3 px-4 pt-5 pb-7 ${sidebarOpen ? "" : "justify-center px-0"}`}
-          >
-            <div className="w-8 h-8 shrink-0 bg-emerald-600 rounded-lg flex items-center justify-center">
-              <LayoutGrid size={18} className="text-white" />
-            </div>
-            {sidebarOpen && (
-              <span className="font-bold text-slate-900 tracking-tight whitespace-nowrap flex-1">
-                Volunteer Portal
-              </span>
-            )}
-          </div>
-
-          <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-            <SidebarLink
-              active={activeTab === "overview"}
-              collapsed={!sidebarOpen}
-              onClick={() => setActiveTab("overview")}
-              icon={LayoutGrid}
-              label="Dashboard"
-              badge
-            />
-            {sidebarOpen && (
-              <div className="mt-6 mb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none">
-                Management
-              </div>
-            )}
-            {!sidebarOpen && <div className="my-3 border-t border-slate-100" />}
-            <SidebarLink
-              active={activeTab === "enroll"}
-              collapsed={!sidebarOpen}
-              onClick={() => setActiveTab("enroll")}
-              icon={UserPlus}
-              label="Enroll Student"
-            />
-            <SidebarLink
-              active={false}
-              collapsed={!sidebarOpen}
-              onClick={() => {}}
-              icon={Bell}
-              label="Notifications"
-            />
-            {sidebarOpen && (
-              <div className="mt-6 mb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none">
-                Support
-              </div>
-            )}
-            {!sidebarOpen && <div className="my-3 border-t border-slate-100" />}
-            <SidebarLink
-              active={false}
-              collapsed={!sidebarOpen}
-              onClick={() => {}}
-              icon={HelpCircle}
-              label="Documentation"
-            />
-          </nav>
-
-          {sidebarOpen && (
-            <div className="px-3 pb-6 pt-4 space-y-4">
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <HelpCircle size={14} className="text-slate-400" />
-                  <span className="text-[11px] font-bold text-slate-900">
-                    Need Support?
-                  </span>
+            {/* Desktop Sidebar */}
+            <aside className={`hidden md:flex flex-col bg-slate-100 transition-all duration-300 overflow-hidden shrink-0 ${sidebarOpen ? 'md:w-56' : 'md:w-0'}`}>
+                {/* Brand */}
+                <div className="h-20 px-5 flex items-center gap-3 border-b border-slate-200/60">
+                    <div className="w-9 h-9 bg-emerald-500 rounded-xl flex items-center justify-center shadow-md shadow-emerald-500/25 shrink-0">
+                        <LayoutGrid className="text-white" size={18} strokeWidth={2.5} />
+                    </div>
+                    {sidebarOpen && (
+                        <div>
+                            <div className="text-[15px] font-black tracking-tight text-slate-900 uppercase leading-none">FORESE</div>
+                            <div className="text-[10px] font-semibold text-emerald-600 uppercase tracking-widest mt-0.5">Volunteer Hub</div>
+                        </div>
+                    )}
                 </div>
-                <p className="text-[10px] text-slate-500 font-medium mb-3 leading-relaxed">
-                  Get in touch with our platform agents.
-                </p>
-                <button className="w-full bg-white border border-slate-200 py-2 rounded-xl text-[10px] font-bold text-slate-900 hover:bg-slate-50 transition-colors shadow-sm">
-                  Contact us
-                </button>
-              </div>
-              <div className="px-1 flex flex-wrap gap-x-3 gap-y-1">
-                <span className="text-[9px] font-medium text-slate-400 cursor-pointer hover:text-slate-600">
-                  Privacy policy
-                </span>
-                <span className="text-[9px] font-medium text-slate-400 cursor-pointer hover:text-slate-600">
-                  Terms of service
-                </span>
-              </div>
-            </div>
-          )}
-        </aside>
 
-        {/* ── Mobile Drawer ── */}
-        <aside
-          className={[
-            "fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-white border-r border-slate-100 md:hidden",
-            "transition-transform duration-300 ease-in-out",
-            mobileOpen ? "translate-x-0" : "-translate-x-full",
-          ].join(" ")}
-        >
-          <div className="flex items-center gap-3 px-5 pt-5 pb-7 border-b border-slate-100">
-            <div className="w-8 h-8 shrink-0 bg-emerald-600 rounded-lg flex items-center justify-center">
-              <LayoutGrid size={18} className="text-white" />
-            </div>
-            <span className="font-bold text-slate-900 tracking-tight">
-              Volunteer Portal
-            </span>
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="ml-auto p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            <SidebarLink
-              active={activeTab === "overview"}
-              collapsed={false}
-              onClick={() => {
-                setActiveTab("overview");
-                setMobileOpen(false);
-              }}
-              icon={LayoutGrid}
-              label="Dashboard"
-              badge
-            />
-            <div className="mt-6 mb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none">
-              Management
-            </div>
-            <SidebarLink
-              active={activeTab === "enroll"}
-              collapsed={false}
-              onClick={() => {
-                setActiveTab("enroll");
-                setMobileOpen(false);
-              }}
-              icon={UserPlus}
-              label="Enroll Student"
-            />
-            <SidebarLink
-              active={false}
-              collapsed={false}
-              onClick={() => {}}
-              icon={Bell}
-              label="Notifications"
-            />
-            <div className="mt-6 mb-2 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none">
-              Support
-            </div>
-            <SidebarLink
-              active={false}
-              collapsed={false}
-              onClick={() => {}}
-              icon={HelpCircle}
-              label="Documentation"
-            />
-          </nav>
-          <div className="px-4 pb-6">
-            <button
-              onClick={logout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[12px] font-bold text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
-            >
-              <LogOut size={16} />
-              Logout
-            </button>
-          </div>
-        </aside>
+                {/* Nav */}
+                <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+                    <SidebarLink to="/volunteer" icon={LayoutGrid} label="Dashboard" collapsed={!sidebarOpen} />
 
-        {/* ── Main Content Area ── */}
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-          <header className="h-16 bg-white border-b border-slate-100 px-6 flex items-center justify-between shrink-0 z-30">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setMobileOpen(true)}
-                className="md:hidden p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-              >
-                <Menu size={20} />
-              </button>
-              <nav className="hidden sm:flex items-center gap-6">
-                <button
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all shrink-0"
-                >
-                  <PanelLeft size={18} />
-                </button>
-                <nav className="hidden sm:flex items-center gap-1.5 text-[12px] font-bold">
-                  <span className="text-slate-400">Volunteer Portal</span>
-                  <span className="text-slate-300">/</span>
-                  <span className="text-black">
-                    {activeTab === "overview" && "Dashboard"}
-                    {activeTab === "enroll" && "Enroll Student"}
-                  </span>
+                    {sidebarOpen && <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 pt-5 pb-1.5">Actions</p>}
+                    {!sidebarOpen && <div className="my-3 border-t border-slate-200" />}
+
+                    <SidebarLink to="/volunteer/enroll" icon={UserPlus} label="Add Student" collapsed={!sidebarOpen} />
+                    <SidebarLink to="/volunteer/feedback" icon={Star} label="Event Feedback" collapsed={!sidebarOpen} />
+                    <SidebarLink to="/volunteer/notifications" icon={Bell} label="Notifications" collapsed={!sidebarOpen} />
+
+                    {sidebarOpen && <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 pt-5 pb-1.5">Support</p>}
+                    {!sidebarOpen && <div className="my-3 border-t border-slate-200" />}
+                    <SidebarLink to="/volunteer/docs" icon={HelpCircle} label="Help & Docs" collapsed={!sidebarOpen} />
                 </nav>
-              </nav>
-            </div>
 
-            <div className="flex items-center gap-6">
-              <div className="h-8 w-[1px] bg-slate-200 mx-2" />
+                {/* Support card */}
+                {sidebarOpen && (
+                    <div className="px-4 pb-4">
+                        <div className="bg-white rounded-2xl p-5 border border-slate-200">
+                            <div className="w-8 h-8 bg-emerald-50 rounded-xl flex items-center justify-center mb-3">
+                                <HelpCircle size={16} className="text-emerald-600" />
+                            </div>
+                            <p className="text-[12px] font-semibold text-slate-800 mb-0.5">Need help?</p>
+                            <p className="text-[11px] text-slate-400 leading-relaxed mb-3">Contact our support team.</p>
+                            <button className="w-full py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-600 hover:bg-white transition-all">
+                                Contact Support
+                            </button>
+                        </div>
+                    </div>
+                )}
 
-              <div className="flex items-center gap-3 cursor-pointer group">
-                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold overflow-hidden ring-2 ring-transparent group-hover:ring-slate-200 transition-all">
-                  {user?.name?.[0] || "V"}
+                {/* Logout */}
+                <div className="px-3 pb-5">
+                    <button onClick={logout}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all ${!sidebarOpen ? 'justify-center' : ''}`}>
+                        <LogOut size={17} />
+                        {sidebarOpen && 'Log Out'}
+                    </button>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[12px] font-bold text-slate-900">
-                    {user?.name || "Volunteer"}
-                  </span>
-                  <ChevronDown size={14} className="text-slate-400" />
+            </aside>
+
+            {/* Mobile Drawer */}
+            <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-white border-r border-slate-100 md:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-100">
+                    <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shrink-0">
+                        <LayoutGrid className="text-white" size={16} />
+                    </div>
+                    <span className="font-bold text-slate-900">Volunteer Hub</span>
+                    <button onClick={() => setMobileOpen(false)} className="ml-auto p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                        <X size={16} />
+                    </button>
                 </div>
-              </div>
+                <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+                    <SidebarLink to="/volunteer" icon={LayoutGrid} label="Dashboard" collapsed={false} />
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 pt-4 pb-1">Actions</p>
+                    <SidebarLink to="/volunteer/enroll" icon={UserPlus} label="Add Student" collapsed={false} />
+                    <SidebarLink to="/volunteer/feedback" icon={Star} label="Event Feedback" collapsed={false} />
+                    <SidebarLink to="/volunteer/notifications" icon={Bell} label="Notifications" collapsed={false} />
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 pt-4 pb-1">Support</p>
+                    <SidebarLink to="/volunteer/docs" icon={HelpCircle} label="Help & Docs" collapsed={false} />
+                </nav>
+                <div className="px-3 pb-6">
+                    <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
+                        <LogOut size={17} /> Log Out
+                    </button>
+                </div>
+            </aside>
 
-              <div className="p-2 text-slate-400 hover:text-slate-900 cursor-pointer transition-colors relative">
-                <Bell size={20} />
-                <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 border-2 border-[#F7F8FA] rounded-full" />
-              </div>
+            {/* Main Content */}
+            <div className="flex flex-col flex-1 min-w-0 overflow-hidden md:rounded-2xl md:border md:border-slate-200 bg-white md:shadow-sm">
 
-              <div
-                onClick={logout}
-                className="p-2 text-slate-400 hover:text-red-500 cursor-pointer transition-colors"
-                title="Logout"
-              >
-                <LogOut size={20} />
-              </div>
-            </div>
-          </header>
-
-          <main className="flex-1 overflow-y-auto p-6 lg:p-8 pb-16 relative">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
-                <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] animate-pulse">
-                  Synchronizing Pipeline...
-                </p>
-              </div>
-            ) : (
-              <AnimatePresence mode="wait">
-                {activeTab === "overview" && (
-                  <motion.div
-                    key="overview"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-8"
-                  >
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <SummaryCard
-                        title="Total Students"
-                        value={total}
-                        subtext="Students Directory"
-                        icon={Users}
-                      />
-                      <SummaryCard
-                        title="Evaluated"
-                        value={completed}
-                        subtext="Students Evaluated"
-                        icon={CheckCircle2}
-                      />
-                      <SummaryCard
-                        title="Pending"
-                        value={pending}
-                        subtext="Students Pending"
-                        icon={Clock}
-                      />
-                      <SummaryCard
-                        title="Absentee"
-                        value={noShows}
-                        subtext="No Show Count"
-                        icon={X}
-                      />
+                {/* Header */}
+                <header className="h-16 bg-white border-b border-slate-100 px-6 flex items-center justify-between shrink-0 z-30">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setMobileOpen(true)} className="md:hidden p-2 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+                            <Menu size={20} />
+                        </button>
+                        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all">
+                            <PanelLeft size={18} />
+                        </button>
+                        <div className="hidden sm:flex items-center gap-2 text-[13px]">
+                            <span className="text-slate-400 font-medium">Volunteer Hub</span>
+                            <span className="text-slate-300">/</span>
+                            <span className="text-slate-800 font-semibold">{navLabel}</span>
+                        </div>
                     </div>
 
-                    {/* Table + Chart Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      {/* Student Table */}
-                      <div className="lg:col-span-2 bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
-                        <div className="p-6 border-b border-slate-50 flex flex-col md:flex-row gap-4 md:items-center justify-between bg-white sticky top-0">
-                          <div className="relative group flex-1 max-w-md">
-                            <Search
-                              className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-600 transition-colors"
-                              size={16}
-                            />
-                            <input
-                              value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
-                              className="w-full bg-slate-50 border-none rounded-2xl h-12 pl-12 pr-6 text-sm font-bold text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-emerald-600/5 outline-none transition-all"
-                              placeholder="Search students..."
-                            />
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {(
-                              [
-                                ["ALL", "All"],
-                                ["PENDING", "Pending"],
-                                ["COMPLETED", "Verified"],
-                                ["NO_SHOW", "Absentees"],
-                              ] as const
-                            ).map(([key, label]) => (
-                              <button
-                                key={key}
-                                onClick={() => setFilterStatus(key as any)}
-                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterStatus === key ? "bg-emerald-600 text-white shadow-xl shadow-emerald-600/20" : "bg-slate-50 text-slate-400 hover:text-slate-900 border border-slate-100 hover:border-slate-200"}`}
-                              >
-                                {label}
-                              </button>
-                            ))}
-                          </div>
+                    <div className="flex items-center gap-3">
+                        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200 text-[12px] text-slate-500">
+                            <Clock size={13} className="text-slate-400" />
+                            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
+                        <div className="flex items-center gap-2.5 cursor-pointer">
+                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
+                                <User size={15} className="text-slate-400" />
+                            </div>
+                            <span className="text-[13px] font-semibold text-slate-800 hidden sm:block">
+                                {user?.name || 'Volunteer'}
+                            </span>
+                        </div>
+                    </div>
+                </header>
 
-                        <div className="flex-1 overflow-x-auto min-h-[400px]">
-                          <table className="w-full text-left">
-                            <thead>
-                              <tr className="bg-slate-50/50">
-                                <th className="pl-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest w-14 text-center">
-                                  S.no
-                                </th>
-                                <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                  Student Name
-                                </th>
-                                <th className="py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-                                  Department
-                                </th>
-                                <th className="pr-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-                                  Status
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {filteredStudents.map((s, idx) => (
-                                <tr
-                                  key={s.id}
-                                  className="group hover:bg-slate-50/30 transition-all"
-                                >
-                                  <td className="pl-8 py-5 text-[12px] font-bold text-slate-300 text-center">
-                                    {idx + 1}
-                                  </td>
-                                  <td className="py-5">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-900 font-black text-xs group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                                        {s.name[0]}
-                                      </div>
-                                      <div>
-                                        <div className="text-[13px] font-bold text-slate-900 tracking-tight">
-                                          {s.name}
+                {/* Page Content */}
+                <main className="flex-1 overflow-y-auto p-6 lg:p-8 pb-16">
+                    <AnimatePresence mode="wait">
+                        <Routes location={location} key={location.pathname}>
+                            <Route path="/" element={<Overview />} />
+                            <Route path="/enroll" element={<EnrollStudent />} />
+                            <Route path="/notifications" element={<Notifications notifications={notifications} markAsRead={markAsRead} markAllAsRead={markAllAsRead} />} />
+                        </Routes>
+                    </AnimatePresence>
+                </main>
+            </div>
+        </div>
+    );
+};
+
+// ─── Overview ─────────────────────────────────────────────────────────────────
+
+const Overview = () => {
+    const { user } = useAuthStore();
+    const [stats, setStats] = useState({ enrolledToday: 0, totalEnrolled: 0 });
+    const [students, setStudents] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterDept, setFilterDept] = useState('ALL');
+    const [filterStatus, setFilterStatus] = useState('ALL');
+    const [showFilters, setShowFilters] = useState(false);
+
+    const DEPARTMENTS = [
+        "Computer Science", "Information Technology", "Artificial Intelligence and Data Science",
+        "Electronics and Communication Engineering", "Electrical and Electronics Engineering",
+        "Civil Engineering", "Chemical Engineering", "Mechanical and Automation Engineering",
+        "Mechanical Engineering", "Automobile Engineering", "Biotechnology",
+    ];
+
+    const fetchData = async () => {
+        try {
+            const [statsRes, studentsRes] = await Promise.all([
+                api.get('/volunteer/stats'),
+                api.get('/volunteer/students'),
+            ]);
+            setStats(statsRes.data);
+            setStudents(studentsRes.data);
+        } catch (err) {
+            console.error('Data fetch failed', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+        if (user?.id) {
+            socket.connect();
+            socket.emit('join_room', { room: user.id });
+            socket.on('student_transferred', (data: { message: string; count: number }) => {
+                toast.success('New Student Added', { description: data.message });
+                fetchData();
+            });
+            socket.on('admin_notification', (data: { title: string; message: string }) => {
+                toast.info(data.title, { description: data.message });
+            });
+        }
+        const interval = setInterval(fetchData, 30000);
+        return () => {
+            clearInterval(interval);
+            socket.off('student_transferred');
+            socket.off('admin_notification');
+            socket.disconnect();
+        };
+    }, [user]);
+
+    const filteredStudents = students.filter(s => {
+        const q = searchTerm.toLowerCase();
+        const matchesSearch = s.name.toLowerCase().includes(q) || s.register_number.toLowerCase().includes(q);
+        const matchesDept = filterDept === 'ALL' || s.department === filterDept;
+        const matchesStatus = filterStatus === 'ALL' ||
+            (filterStatus === 'COMPLETED'
+                ? (s.evaluation_status === 'COMPLETED' || s.status === 'COMPLETED')
+                : (s.evaluation_status !== 'COMPLETED' && s.status !== 'COMPLETED'));
+        return matchesSearch && matchesDept && matchesStatus;
+    });
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-7">
+            <div>
+                <h1 className="text-2xl font-bold text-slate-900 leading-none mb-1">Dashboard</h1>
+                <p className="text-[13px] text-slate-500">Live status of your assigned students.</p>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <StatCard title="Students Evaluated" value={stats.enrolledToday} icon={Activity} themeIndex={0} />
+                <StatCard title="Total Assigned" value={stats.totalEnrolled} icon={Users} themeIndex={1} />
+            </div>
+
+            {/* Table */}
+            <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                {/* Search + Filter bar */}
+                <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <input
+                            className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all"
+                            placeholder="Search by name or register number..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowFilters(true)}
+                        className={`flex items-center gap-2 h-10 px-4 rounded-xl border text-[13px] font-medium transition-all ${
+                            filterDept !== 'ALL' || filterStatus !== 'ALL'
+                                ? 'bg-emerald-500 border-emerald-500 text-white'
+                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                        }`}
+                    >
+                        <Filter size={15} /> Filters
+                        {(filterDept !== 'ALL' || filterStatus !== 'ALL') && (
+                            <span className="bg-white/30 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">Active</span>
+                        )}
+                    </button>
+                </div>
+
+                {/* Filter Modal */}
+                <AnimatePresence>
+                    {showFilters && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                onClick={() => setShowFilters(false)}
+                                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+                            <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-100">
+                                <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                                    <h3 className="text-[15px] font-semibold text-slate-900">Filter Students</h3>
+                                    <button onClick={() => setShowFilters(false)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"><X size={18} /></button>
+                                </div>
+                                <div className="px-6 py-5 space-y-4">
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Department</label>
+                                        <div className="relative">
+                                            <select value={filterDept} onChange={e => setFilterDept(e.target.value)}
+                                                className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 pr-9 text-[13px] text-slate-700 font-medium outline-none appearance-none cursor-pointer">
+                                                {['ALL', ...DEPARTMENTS].map(d => <option key={d} value={d}>{d === 'ALL' ? 'All Departments' : d}</option>)}
+                                            </select>
+                                            <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                         </div>
-                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                          {s.register_number}
-                                        </div>
-                                      </div>
                                     </div>
-                                  </td>
-                                  <td className="py-5 text-center">
-                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">
-                                      {s.department || "General"}
-                                    </span>
-                                  </td>
-                                  <td className="pr-8 py-5 text-center">
-                                    {s.evaluation_status === "COMPLETED" ||
-                                    s.status === "COMPLETED" ? (
-                                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-100">
-                                        <CheckCircle2 size={11} /> Verified
-                                      </span>
-                                    ) : (
-                                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-amber-100">
-                                        <Clock size={11} /> Awaiting HR
-                                      </span>
-                                    )}
-                                  </td>
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Status</label>
+                                        <div className="relative">
+                                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+                                                className="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-4 pr-9 text-[13px] text-slate-700 font-medium outline-none appearance-none cursor-pointer">
+                                                <option value="ALL">All Status</option>
+                                                <option value="COMPLETED">Evaluated</option>
+                                                <option value="PENDING">Awaiting</option>
+                                            </select>
+                                            <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+                                    <button onClick={() => { setFilterDept('ALL'); setFilterStatus('ALL'); }}
+                                        className="flex-1 h-10 rounded-xl text-[13px] font-medium text-slate-500 hover:text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 transition-all">
+                                        Reset
+                                    </button>
+                                    <button onClick={() => setShowFilters(false)}
+                                        className="flex-[2] h-10 bg-emerald-500 text-white rounded-xl text-[13px] font-semibold hover:bg-emerald-600 transition-all">
+                                        Apply Filters
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
+                {/* Table */}
+                <div className="overflow-x-auto">
+                    <table className="w-full table-fixed">
+                        <colgroup>
+                            <col style={{ width: '52px' }} />
+                            <col style={{ width: '35%' }} />
+                            <col />
+                            <col style={{ width: '140px' }} />
+                        </colgroup>
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100">
+                                <th className="px-6 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">#</th>
+                                <th className="px-3 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Student</th>
+                                <th className="px-3 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Department</th>
+                                <th className="px-6 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={4} className="py-16 text-center text-[13px] text-slate-400">
+                                        Loading students...
+                                    </td>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                          {filteredStudents.length === 0 && (
-                            <div className="py-24 flex flex-col items-center justify-center text-slate-400 gap-4">
-                              <Search size={32} strokeWidth={1.5} />
-                              <p className="text-[10px] font-black uppercase tracking-[0.25em]">
-                                No matching students detected
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                            ) : filteredStudents.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="py-16 text-center text-[13px] text-slate-400">
+                                        No students found.
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredStudents.map((s, i) => (
+                                    <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-6 py-4 text-[12px] text-slate-300 font-mono">{String(i + 1).padStart(2, '0')}</td>
+                                        <td className="px-3 py-4">
+                                            <div className="text-[13px] font-semibold text-slate-900 truncate">{s.name}</div>
+                                            <div className="text-[11px] text-slate-400 mt-0.5">{s.register_number}</div>
+                                        </td>
+                                        <td className="px-3 py-4 text-[12px] text-slate-500 truncate">{s.department || 'General'}</td>
+                                        <td className="px-6 py-4">
+                                            {s.evaluation_status === 'COMPLETED' || s.status === 'COMPLETED' ? (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[11px] font-semibold border border-emerald-100">
+                                                    <CheckCircle2 size={11} /> Evaluated
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full text-[11px] font-semibold border border-amber-100">
+                                                    <Clock size={11} /> Awaiting
+                                                </span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </motion.div>
+    );
+};
 
-                      {/* Pie Chart Panel */}
-                      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8 flex flex-col h-fit">
-                        <div className="flex justify-between items-center mb-10">
-                          <h3 className="text-[12px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                            Session Status{" "}
-                            <Info size={14} className="text-slate-300" />
-                          </h3>
-                        </div>
+// ─── Enroll Student ───────────────────────────────────────────────────────────
 
-                        <div className="h-64 relative mb-12">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={chartData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={75}
-                                outerRadius={100}
-                                paddingAngle={5}
-                                dataKey="value"
-                                stroke="none"
-                              >
-                                {chartData.map((entry, index) => (
-                                  <Cell
-                                    key={`cell-${index}`}
-                                    fill={entry.color}
-                                  />
-                                ))}
-                              </Pie>
-                            </PieChart>
-                          </ResponsiveContainer>
-                          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-4xl font-black text-slate-900">
-                              {total}
-                            </span>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                              Total
-                            </span>
-                          </div>
-                        </div>
+const EnrollStudent = () => {
+    const [formData, setFormData] = useState({
+        name: '', register_number: '', department: '', resume_url: '',
+    });
 
-                        <div className="grid grid-cols-2 gap-y-6">
-                          {chartData.map((item) => (
-                            <div
-                              key={item.name}
-                              className="flex items-center gap-2.5"
-                            >
-                              <div
-                                className="w-2.5 h-2.5 rounded-full"
-                                style={{ backgroundColor: item.color }}
-                              />
-                              <div className="flex flex-col">
-                                <span className="text-[11px] font-bold text-slate-900 leading-none mb-1">
-                                  {item.name}
-                                </span>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                  {item.value} Units
-                                </span>
-                              </div>
-                            </div>
-                          ))}
+    const departments = [
+        'Computer Science', 'Information Technology', 'Artificial Intelligence and Data Science',
+        'Electronics and Communication Engineering', 'Electrical and Electronics Engineering',
+        'Civil Engineering', 'Chemical Engineering', 'Mechanical and Automation Engineering',
+        'Mechanical Engineering', 'Automobile Engineering', 'Biotechnology',
+    ];
+
+    const isValidDriveLink = (url: string) =>
+        !url || /^https:\/\/(drive\.google\.com|docs\.google\.com)\/.+/i.test(url);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (formData.resume_url && !isValidDriveLink(formData.resume_url)) {
+            alert('Please enter a valid Google Drive link.');
+            return;
+        }
+        try {
+            await api.post('/volunteer/enroll', formData);
+            alert('Student registered successfully.');
+            setFormData({ name: '', register_number: '', department: '', resume_url: '' });
+        } catch {
+            alert('Registration failed. Please try again.');
+        }
+    };
+
+    const inputClass = "w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all";
+    const labelClass = "block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2";
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-2xl">
+            <div>
+                <h1 className="text-2xl font-bold text-slate-900 leading-none mb-1">Add Student</h1>
+                <p className="text-[13px] text-slate-500">Register a new student to your assigned cohort.</p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center border border-emerald-100">
+                            <UserPlus size={16} className="text-emerald-600" />
                         </div>
-                      </div>
+                        <div>
+                            <h2 className="text-[14px] font-semibold text-slate-900">Student Details</h2>
+                            <p className="text-[12px] text-slate-400 mt-0.5">Fill in the student's information below</p>
+                        </div>
                     </div>
-                  </motion.div>
-                )}
+                </div>
 
-                {activeTab === "enroll" && (
-                  <motion.div
-                    key="enroll"
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="max-w-4xl space-y-10"
-                  >
-                    <header className="mb-10">
-                      <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-3">
-                        Enroll{" "}
-                        <span className="text-emerald-600">Student</span>
-                      </h1>
-                      <p className="text-slate-400 font-medium text-[15px]">
-                        Initialize student identity for the evaluation pipeline.
-                      </p>
-                    </header>
-
-                    <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-12 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/5 blur-[100px] pointer-events-none" />
-
-                      <form
-                        onSubmit={handleEnrollSubmit}
-                        className="space-y-10"
-                      >
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <div className="space-y-3">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">
-                              Student Name
-                            </label>
+                <form onSubmit={handleSubmit} className="px-6 py-6 space-y-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <label className={labelClass}>Student Name</label>
                             <input
-                              value={formData.name}
-                              onChange={(e) =>
-                                setFormData((p) => ({
-                                  ...p,
-                                  name: e.target.value,
-                                }))
-                              }
-                              className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-6 text-sm font-bold placeholder-slate-400 focus:ring-4 focus:ring-emerald-600/5 outline-none transition-all"
-                              placeholder="Full Name"
-                              required
+                                className={inputClass}
+                                placeholder="Enter full name"
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                required
                             />
-                          </div>
-                          <div className="space-y-3">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">
-                              Reg Number
-                            </label>
-                            <input
-                              value={formData.register_number}
-                              onChange={(e) =>
-                                setFormData((p) => ({
-                                  ...p,
-                                  register_number: e.target.value,
-                                }))
-                              }
-                              className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-6 text-sm font-bold placeholder-slate-400 focus:ring-4 focus:ring-emerald-600/5 outline-none transition-all"
-                              placeholder="Format: 212723xxxxxxx"
-                              required
-                            />
-                          </div>
-                          <div className="space-y-3">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">
-                              Department
-                            </label>
-                            <select
-                              value={formData.department}
-                              onChange={(e) =>
-                                setFormData((p) => ({
-                                  ...p,
-                                  department: e.target.value,
-                                }))
-                              }
-                              className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-6 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-emerald-600/5 outline-none transition-all appearance-none"
-                              required
-                            >
-                              <option value="" disabled>
-                                Select Department
-                              </option>
-                              {departments.map((dept) => (
-                                <option key={dept} value={dept}>
-                                  {dept}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="space-y-3">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">
-                              Resume (Drive Link)
-                            </label>
-                            <input
-                              value={formData.resume_url}
-                              onChange={(e) =>
-                                setFormData((p) => ({
-                                  ...p,
-                                  resume_url: e.target.value,
-                                }))
-                              }
-                              className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-14 px-6 text-sm font-bold placeholder-slate-400 focus:ring-4 focus:ring-emerald-600/5 outline-none transition-all"
-                              placeholder="drive.google.com/..."
-                              required
-                            />
-                          </div>
                         </div>
 
-                        <div className="pt-6 flex justify-end">
-                          <button
+                        <div>
+                            <label className={labelClass}>Register Number</label>
+                            <input
+                                className={inputClass}
+                                placeholder="e.g. 212723060190"
+                                value={formData.register_number}
+                                onChange={e => setFormData({ ...formData, register_number: e.target.value })}
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className={labelClass}>Department</label>
+                            <div className="relative">
+                                <select
+                                    className={`${inputClass} appearance-none pr-9 cursor-pointer`}
+                                    value={formData.department}
+                                    onChange={e => setFormData({ ...formData, department: e.target.value })}
+                                    required
+                                >
+                                    <option value="" disabled>Select department</option>
+                                    {departments.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
+                                <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className={labelClass}>Resume Link</label>
+                            <input
+                                className={`${inputClass} ${formData.resume_url && !isValidDriveLink(formData.resume_url) ? 'border-red-300 focus:border-red-400 focus:ring-red-500/20' : ''}`}
+                                placeholder="Google Drive link"
+                                value={formData.resume_url}
+                                onChange={e => setFormData({ ...formData, resume_url: e.target.value })}
+                                required
+                            />
+                            {formData.resume_url && !isValidDriveLink(formData.resume_url) && (
+                                <p className="text-[11px] text-red-500 font-medium mt-1.5">Only Google Drive links are accepted.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100">
+                        <button
                             type="submit"
-                            className="px-16 py-5 bg-emerald-600 text-white rounded-full text-[13px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-emerald-600/30 hover:bg-emerald-700 transition-all flex items-center gap-4 active:scale-95 font-sans"
-                          >
-                            <UserPlus size={18} />
-                            Enroll Student
-                          </button>
-                        </div>
-                      </form>
+                            className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[13px] font-semibold transition-all shadow-sm active:scale-95"
+                        >
+                            <UserPlus size={15} /> Add Student
+                        </button>
                     </div>
-                  </motion.div>
+                </form>
+            </div>
+        </motion.div>
+    );
+};
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+const Notifications = ({ notifications, markAsRead, markAllAsRead }: { 
+    notifications: Notification[]; 
+    markAsRead: (id: string) => void;
+    markAllAsRead: () => void;
+}) => {
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900 leading-none mb-1">Notifications</h1>
+                    <p className="text-[13px] text-slate-500">Stay updated on student transfers and platform alerts.</p>
+                </div>
+                {notifications.some(n => !n.isRead) && (
+                    <button 
+                        onClick={markAllAsRead}
+                        className="text-[12px] font-semibold text-emerald-600 hover:text-emerald-700 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-all"
+                    >
+                        Mark all as read
+                    </button>
                 )}
-              </AnimatePresence>
-            )}
-          </main>
-        </div>
-      </div>
-    </div>
-  );
-}
+            </div>
 
-// ─── Support Components ───────────────────────────────────────────────────────
+            <div className="space-y-3">
+                {notifications.length > 0 ? (
+                    notifications.map((n) => (
+                        <motion.div
+                            key={n.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            onClick={() => !n.isRead && markAsRead(n.id)}
+                            className={`group p-4 bg-white rounded-2xl border transition-all cursor-pointer ${
+                                n.isRead ? "border-slate-100 opacity-75" : "border-emerald-100 bg-emerald-50/10 shadow-sm"
+                            } hover:border-emerald-200`}
+                        >
+                            <div className="flex gap-4">
+                                <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center ${
+                                    n.isRead ? "bg-slate-50 text-slate-400" : "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                                }`}>
+                                    <Bell size={18} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className={`text-[14px] font-bold truncate ${n.isRead ? "text-slate-600" : "text-slate-900"}`}>
+                                            {n.title || "Notification"}
+                                        </h3>
+                                        <span className="text-[11px] text-slate-400 font-medium shrink-0">
+                                            {new Date(n.createdAt).toLocaleDateString()} at {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                    <p className={`text-[13px] leading-relaxed ${n.isRead ? "text-slate-400" : "text-slate-600"}`}>
+                                        {n.message}
+                                    </p>
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                    {!n.isRead && <div className="w-2 h-2 rounded-full bg-emerald-500" />}
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
+                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                            <Bell size={24} className="text-slate-300" />
+                        </div>
+                        <h3 className="text-[15px] font-bold text-slate-800">Clear as a whistle!</h3>
+                        <p className="text-[12px] text-slate-400 mt-1">You're all caught up with your notifications.</p>
+                    </div>
+                )}
+            </div>
+        </motion.div>
+    );
+};
 
-function SidebarLink({
-  active,
-  onClick,
-  icon: Icon,
-  label,
-  badge,
-  collapsed,
-}: any) {
-  return (
-    <button
-      onClick={onClick}
-      title={collapsed ? label : undefined}
-      className={`w-full flex items-center gap-4 px-3 py-3 rounded-2xl transition-all relative group ${
-        collapsed ? "justify-center px-0" : ""
-      } ${
-        active
-          ? "bg-emerald-50 text-emerald-600 shadow-sm border border-emerald-100/50"
-          : "text-slate-400 hover:text-slate-900 hover:bg-slate-50/50"
-      }`}
-    >
-      <div
-        className={`p-1.5 rounded-lg shrink-0 transition-all ${active ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20" : "text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-900"}`}
-      >
-        <Icon size={16} strokeWidth={active ? 3 : 2} />
-      </div>
-      {!collapsed && (
-        <span
-          className={`text-[12px] tracking-tight transition-all whitespace-nowrap ${active ? "font-black" : "font-bold text-slate-400"}`}
-        >
-          {label}
-        </span>
-      )}
-
-      {active && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-600 rounded-r-full" />
-      )}
-      {badge && !collapsed && (
-        <div className="ml-auto w-1.5 h-1.5 bg-emerald-600 rounded-full shadow-[0_0_8px_rgba(5,150,105,0.4)]" />
-      )}
-    </button>
-  );
-}
-
-function SummaryCard({ title, value, subtext, icon: Icon }: any) {
-  return (
-    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 relative group hover:shadow-xl hover:shadow-black/5 transition-all duration-500 overflow-hidden">
-      <div className="flex justify-between items-start mb-6 relative z-10">
-        <div className="flex flex-col gap-1">
-          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-            {title} <Info size={12} className="text-slate-200" />
-          </h4>
-          <span className="text-4xl font-black text-slate-900 tracking-tighter">
-            {value}
-          </span>
-        </div>
-        <div className="p-3 bg-slate-50 text-slate-400 group-hover:bg-emerald-600 group-hover:text-white rounded-2xl transition-all duration-500 shadow-sm">
-          <Icon size={20} strokeWidth={2} />
-        </div>
-      </div>
-      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 relative z-10 group-hover:text-emerald-600 transition-colors">
-        {subtext}{" "}
-        <span className="text-lg leading-none translate-x-0 group-hover:translate-x-1 transition-transform">
-          →
-        </span>
-      </div>
-      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-emerald-600/5 rounded-full group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
-    </div>
-  );
-}
+export default VolunteerDashboard;

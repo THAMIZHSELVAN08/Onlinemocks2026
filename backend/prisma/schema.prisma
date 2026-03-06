@@ -44,6 +44,7 @@ model User {
 
   hrProfile        HrProfile?
   volunteerProfile VolunteerProfile?
+  pipelineProfile  PipelineProfile?
 
   evaluationsGiven Evaluation[]      @relation("HrEvaluations")
   transfersFrom    StudentTransfer[] @relation("TransferFromHr")
@@ -54,6 +55,15 @@ model User {
   hrAssignments    HrAssignment[]
 
   feedbacks Feedback[] // ← ADD THIS
+}
+
+model PipelineProfile {
+  id    String  @id @db.Uuid
+  name  String? @db.VarChar(255)
+
+  user User @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("pipeline_profiles")
 }
 
 model Student {
@@ -154,6 +164,7 @@ model StudentTransfer {
 model Notification {
   id         String           @id @default(uuid()) @db.Uuid
   receiverId String           @map("receiver_id") @db.Uuid
+  title      String?
   message    String
   type       NotificationType @default(GENERAL)
   isRead     Boolean          @default(false) @map("is_read")

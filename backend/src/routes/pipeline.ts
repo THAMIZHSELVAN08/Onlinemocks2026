@@ -18,7 +18,10 @@ const pipelineSecurity = [{ bearerAuth: [] }];
 
 const resumeStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, "uploads/resumes/"),
-  filename: (_req, file, cb) => cb(null, file.originalname),
+  filename: (req, _file, cb) => {
+    const regNo = req.params.registerNumber || Date.now().toString();
+    cb(null, `${regNo}.pdf`);
+  },
 });
 
 const uploadResume = multer({ storage: resumeStorage });
@@ -154,27 +157,19 @@ router.post(
     try {
       await prisma.$transaction(async (tx) => {
         for (const studentId of studentIds) {
-          const existingAssignment = await tx.hrAssignment.findFirst({
-            where: { studentId },
+          // Check if already assigned to THIS specific HR
+          const existingForTarget = await tx.hrAssignment.findFirst({
+            where: { studentId, hrId: targetHrId },
           });
 
-          const lastAssignment = await tx.hrAssignment.findFirst({
-            where: { hrId: targetHrId },
-            orderBy: { order: "desc" },
-          });
-
-          const nextOrder = lastAssignment ? lastAssignment.order + 1 : 1;
-
-          if (existingAssignment) {
-            await tx.hrAssignment.update({
-              where: { id: existingAssignment.id },
-              data: {
-                hrId: targetHrId,
-                order: nextOrder,
-                status: InterviewStatus.PENDING,
-              },
+          if (!existingForTarget) {
+            const lastAssignment = await tx.hrAssignment.findFirst({
+              where: { hrId: targetHrId },
+              orderBy: { order: "desc" },
             });
-          } else {
+
+            const nextOrder = lastAssignment ? lastAssignment.order + 1 : 1;
+
             await tx.hrAssignment.create({
               data: {
                 hrId: targetHrId,
@@ -182,15 +177,16 @@ router.post(
                 order: nextOrder,
               },
             });
-          }
 
-          await tx.studentTransfer.create({
-            data: {
-              studentId,
-              toHrId: targetHrId,
-              transferReason: reason,
-            },
-          });
+            await tx.studentTransfer.create({
+              data: {
+                studentId,
+                fromHrId: null, // Additive allocation
+                toHrId: targetHrId,
+                transferReason: reason,
+              },
+            });
+          }
         }
       });
 

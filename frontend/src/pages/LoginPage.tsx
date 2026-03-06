@@ -29,7 +29,8 @@ const LoginPage = () => {
             if (role === 'ADMIN') navigate('/admin');
             else if (role === 'HR') navigate('/hr');
             else if (role === 'VOLUNTEER') navigate('/volunteer');
-            else navigate('/student');
+            else if (role === 'PIPELINE') navigate('/pipeline');
+            else navigate('/');
 
         } catch (err: any) {
             setError(err.response?.data?.message || 'Authentication failed. Please check your credentials.');
@@ -40,16 +41,16 @@ const LoginPage = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans selection:bg-indigo-500/20">
-            {/* Main Bespoke Card */}
+            {/* Main Card */}
             <motion.div 
                 initial={{ opacity: 0, scale: 0.98, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                 className="w-full max-w-[1100px] min-h-[700px] bg-white rounded-[3rem] shadow-[0_40px_120px_-20px_rgba(0,0,0,0.1)] flex overflow-hidden border border-slate-100"
             >
-                {/* Left Side: Animated Brand Area */}
+                {/* Left Side: Brand Area */}
                 <div className="w-[45%] relative p-12 flex flex-col justify-between overflow-hidden m-4 rounded-[2.5rem]">
-                    {/* Background Component */}
+                    {/* Background */}
                     <div className="absolute inset-0 z-0 scale-110">
                         <Grainient
                             color1="#4f46e5"
@@ -61,19 +62,27 @@ const LoginPage = () => {
                             zoom={0.8}
                         />
                     </div>
-                    
 
-                    <div className="relative z-10 flex-grow flex items-center">
-                        <h2 className="text-[72px] font-black text-white leading-[0.9] tracking-tighter italic">
-                            Mock<br /><span className="text-white/40">Placement</span><br />2026
-                        </h2>
+                    {/* Top: Year badge */}
+                    <div className="relative z-10">
+                        <span className="text-white/50 text-[11px] font-bold uppercase tracking-[0.25em]">2026</span>
                     </div>
 
-                    {/* Bottom Content: Branding Text */}
-                    <div className="relative z-10 text-white">
-                        <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Enterprise Assessment Protocol</p>
-                        <p className="text-white/80 text-[13px] font-medium max-w-[280px] leading-relaxed italic">
-                            "Excellence is not an act, but a habit. Initialize your assessment cycle now."
+                    {/* Center: Title */}
+                    <div className="relative z-10 flex-grow flex items-center">
+                        <div>
+                            <h2 className="text-[64px] font-black text-white leading-[1.0] tracking-tight">
+                                MOCK<br />
+                                <span className="text-black/60">PLACEMENT</span>
+                            </h2>
+                        </div>
+                    </div>
+
+                    {/* Bottom: Divider line + subtle label */}
+                    <div className="relative z-10">
+                        <div className="w-10 h-[2px] bg-white/30 mb-4 rounded-full" />
+                        <p className="text-white/50 text-[11px] font-semibold uppercase tracking-[0.2em]">
+                            Assessment Portal
                         </p>
                     </div>
                 </div>
@@ -81,7 +90,7 @@ const LoginPage = () => {
                 {/* Right Side: Form Area */}
                 <div className="flex-1 p-16 flex flex-col justify-center">
                     <div className="max-w-[360px] mx-auto w-full">
-                        {/* Branding: Forese Logo */}
+                        {/* Logo */}
                         <div className="mb-10 text-center">
                             <motion.div
                                 initial={{ opacity: 0, y: -10 }}
@@ -147,7 +156,7 @@ const LoginPage = () => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full h-14 bg-indigo-600 hover:bg-black text-white font-black text-[11px] uppercase tracking-[0.2em] rounded-xl shadow-xl shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-3 mt-6 italic"
+                                className="w-full h-14 bg-indigo-600 hover:bg-black text-white font-black text-[11px] uppercase tracking-[0.2em] rounded-xl shadow-xl shadow-indigo-600/10 transition-all active:scale-95 flex items-center justify-center gap-3 mt-6"
                             >
                                 {loading ? <Loader2 className="animate-spin" size={18} /> : <span>Authorize Access</span>}
                             </button>

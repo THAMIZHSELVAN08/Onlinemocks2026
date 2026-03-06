@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    ChevronLeft, ShieldCheck, ClipboardCheck, 
-    FileText, Save, Activity, Target, Clock
+    ChevronLeft, ShieldCheck, ClipboardCheck,
+    FileText, Save, Activity, Target, Clock, User
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import api from '../api/axios';
+import api, { BASE_URL } from '../api/axios';
+
+interface Student {
+    id: string;
+    name: string;
+    register_number?: string;
+    registerNumber?: string;
+    department?: string;
+    section?: string;
+    hr_name?: string;
+    resume_url?: string;
+    overallScore?: number;
+}
 
 const EvaluationPage = () => {
     const { studentId } = useParams();
     const navigate = useNavigate();
-
-    interface Student {
-        id: string;
-        name: string;
-        register_number?: string;
-        registerNumber?: string;
-        department?: string;
-        section?: string;
-        hr_name?: string;
-        resume_url?: string;
-        overallScore?: number;
-    }
 
     const [student, setStudent] = useState<Student | null>(null);
     const [loading, setLoading] = useState(true);
@@ -35,12 +35,12 @@ const EvaluationPage = () => {
             technicalKnowledge: 0,
             communicationSkills: 0,
             ambition: 0,
-            selfConfidence: 0
+            selfConfidence: 0,
         },
         strengths: '',
         improvements: '',
         comments: '',
-        overallScore: 0
+        overallScore: 0,
     });
 
     useEffect(() => {
@@ -62,7 +62,7 @@ const EvaluationPage = () => {
     const handleRating = (key: string, value: number) => {
         setEvaluation(prev => ({
             ...prev,
-            criteria: { ...prev.criteria, [key]: value }
+            criteria: { ...prev.criteria, [key]: value },
         }));
     };
 
@@ -70,172 +70,199 @@ const EvaluationPage = () => {
         e.preventDefault();
         const unrated = Object.entries(evaluation.criteria).find(([_, value]) => value === 0);
         if (unrated) {
-            alert(`Please provide a rating for: ${unrated[0].replace(/([A-Z])/g, ' $1').toUpperCase()}`);
+            alert(`Please rate: ${unrated[0].replace(/([A-Z])/g, ' $1')}`);
             return;
         }
         if (evaluation.overallScore === 0) {
             alert('Please provide an overall score.');
             return;
         }
-
         try {
             await api.post('/hr/evaluate', { studentId, ...evaluation });
-            alert('Evaluation protocol successfully finalized.');
+            alert('Evaluation submitted successfully.');
             navigate('/hr/dashboard');
         } catch {
-            alert('Critial system error: protocol rejected.');
+            alert('Submission failed. Please try again.');
         }
     };
 
-    const formattedDate = new Intl.DateTimeFormat('en-US', { 
-        weekday: 'short', 
-        day: 'numeric', 
-        month: 'short', 
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
+    const formattedTime = new Intl.DateTimeFormat('en-US', {
+        weekday: 'short', day: 'numeric', month: 'short',
+        hour: '2-digit', minute: '2-digit', hour12: true,
     }).format(currentTime);
 
     if (loading) return (
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center gap-4">
-            <Activity className="w-10 h-10 text-indigo-600 animate-pulse" />
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Initializing Audit Environment...</p>
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
+            <Activity className="w-8 h-8 text-blue-600 animate-pulse" />
+            <p className="text-[12px] text-slate-400 font-medium">Loading student data...</p>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 selection:bg-indigo-600/10">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto pb-24 px-6">
-                <header className="flex items-center justify-between py-8">
-                    <button onClick={() => navigate('/hr/dashboard')} className="flex items-center gap-2 text-slate-400 hover:text-slate-900 transition-all group">
-                        <div className="p-2 rounded-xl bg-white border border-slate-200 group-hover:border-slate-300 transition-all shadow-sm">
-                            <ChevronLeft size={16} strokeWidth={3} />
+        <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+            <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="max-w-3xl mx-auto pb-24 px-6"
+            >
+                {/* Header */}
+                <header className="flex items-center justify-between py-7">
+                    <button
+                        onClick={() => navigate('/hr/dashboard')}
+                        className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors group"
+                    >
+                        <div className="p-1.5 rounded-lg bg-white border border-slate-200 group-hover:border-slate-300 transition-all shadow-sm">
+                            <ChevronLeft size={16} strokeWidth={2.5} />
                         </div>
-                        <span className="text-[11px] font-black uppercase tracking-widest">Workspace</span>
+                        <span className="text-[13px] font-medium">Back to Dashboard</span>
                     </button>
-                    
-                    <div className="flex items-center gap-4">
-                        <div className="px-4 py-2 bg-white border border-slate-200 rounded-xl flex items-center gap-2 shadow-sm text-[12px] font-bold text-slate-600">
-                            <Clock size={16} className="text-slate-400" />
-                            {formattedDate}
+
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm text-[12px] text-slate-500">
+                            <Clock size={14} className="text-slate-400" />
+                            {formattedTime}
                         </div>
-                        <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl text-[10px] font-black uppercase tracking-widest">
-                            <ShieldCheck size={14} /> Protocol active
+                        <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-[12px] font-medium">
+                            <ShieldCheck size={14} /> Active Session
                         </div>
                     </div>
                 </header>
 
-                {/* Candidate Selection Card */}
-                <div className="bg-white border border-slate-200/60 rounded-[32px] p-8 mb-8 shadow-sm">
-                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
-                        <div className="flex items-center gap-6">
-                            <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-indigo-600/20">
-                                {student?.name?.[0]}
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-black tracking-tight text-slate-900 mb-1">{student?.name}</h1>
-                                <div className="flex items-center gap-3">
-                                    <span className="px-2 py-0.5 bg-slate-50 text-slate-400 text-[9px] font-black border border-slate-100 rounded uppercase tracking-widest">{student?.register_number || student?.registerNumber}</span>
-                                    <div className="w-1 h-1 bg-slate-200 rounded-full" />
-                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{student?.department || 'Specialization Domain'}</span>
+                {/* Student Card */}
+                <div className="bg-white border border-slate-200 rounded-2xl mb-6 shadow-sm overflow-hidden">
+                    <div className="flex flex-col sm:flex-row items-stretch">
+                        {/* Left accent bar */}
+                        <div className="w-full sm:w-1 bg-blue-600 sm:rounded-l-2xl h-1 sm:h-auto" />
+
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 flex-1 px-6 py-5">
+                            <div className="flex items-center gap-5">
+                                {/* Avatar */}
+                                <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/25 shrink-0">
+                                    <User size={24} strokeWidth={2} />
+                                </div>
+
+                                {/* Info */}
+                                <div>
+                                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Candidate</p>
+                                    <h1 className="text-[20px] font-bold text-slate-900 leading-none capitalize">{student?.name}</h1>
+                                    <div className="flex items-center gap-2.5 mt-2 flex-wrap">
+                                        <span className="inline-flex items-center px-2.5 py-1 bg-slate-100 text-slate-600 text-[11px] font-semibold rounded-lg border border-slate-200 tracking-wide font-mono">
+                                            {student?.register_number || student?.registerNumber}
+                                        </span>
+                                        {student?.department && (
+                                            <>
+                                                <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                                <span className="text-[12px] text-slate-500 font-medium">{student.department}</span>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="flex gap-3">
+
                             {student?.resume_url && (
-                                <a href={student.resume_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95 shadow-lg shadow-slate-900/10">
-                                    <FileText size={14} /> Open Repository
+                                <a
+                                    href={student.resume_url.startsWith('http') ? student.resume_url : `${BASE_URL}${student.resume_url}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[12px] font-semibold hover:bg-black transition-all shadow-sm shrink-0"
+                                >
+                                    <FileText size={14} /> View Resume
                                 </a>
                             )}
                         </div>
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-8">
-                    {/* Matrix Card */}
-                    <div className="bg-white border border-slate-200/60 rounded-[32px] p-8 shadow-sm overflow-hidden">
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100"><ClipboardCheck size={20} /></div>
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    {/* Assessment Ratings */}
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
+                            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100">
+                                <ClipboardCheck size={16} className="text-blue-600" />
+                            </div>
                             <div>
-                                <h2 className="text-xl font-black tracking-tight text-slate-900">Assessment Matrix</h2>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Quantitative Evaluation Filters</p>
+                                <h2 className="text-[15px] font-semibold text-slate-900">Assessment Ratings</h2>
+                                <p className="text-[12px] text-slate-400 mt-0.5">Rate each criterion from 1 to 10</p>
                             </div>
                         </div>
-                        
-                        <div className="divide-y divide-slate-50 -mx-8 px-8">
-                            <RatingRow label="Appearance & Attitude" value={evaluation.criteria.appearanceAttitude} onChange={(v) => handleRating('appearanceAttitude', v)} />
-                            <RatingRow label="Managerial Aptitude" value={evaluation.criteria.managerialAptitude} onChange={(v) => handleRating('managerialAptitude', v)} />
-                            <RatingRow label="General Awareness" value={evaluation.criteria.generalAwareness} onChange={(v) => handleRating('generalAwareness', v)} />
-                            <RatingRow label="Technical Knowledge" value={evaluation.criteria.technicalKnowledge} onChange={(v) => handleRating('technicalKnowledge', v)} />
-                            <RatingRow label="Communication Skills" value={evaluation.criteria.communicationSkills} onChange={(v) => handleRating('communicationSkills', v)} />
-                            <RatingRow label="Ambition Scale" value={evaluation.criteria.ambition} onChange={(v) => handleRating('ambition', v)} />
-                            <RatingRow label="Self-Confidence" value={evaluation.criteria.selfConfidence} onChange={(v) => handleRating('selfConfidence', v)} />
+
+                        <div className="divide-y divide-slate-50 px-6">
+                            <RatingRow label="Appearance & Attitude"   value={evaluation.criteria.appearanceAttitude}   onChange={v => handleRating('appearanceAttitude', v)} />
+                            <RatingRow label="Managerial Aptitude"     value={evaluation.criteria.managerialAptitude}   onChange={v => handleRating('managerialAptitude', v)} />
+                            <RatingRow label="General Awareness"       value={evaluation.criteria.generalAwareness}     onChange={v => handleRating('generalAwareness', v)} />
+                            <RatingRow label="Technical Knowledge"     value={evaluation.criteria.technicalKnowledge}   onChange={v => handleRating('technicalKnowledge', v)} />
+                            <RatingRow label="Communication Skills"    value={evaluation.criteria.communicationSkills}  onChange={v => handleRating('communicationSkills', v)} />
+                            <RatingRow label="Ambition"                value={evaluation.criteria.ambition}             onChange={v => handleRating('ambition', v)} />
+                            <RatingRow label="Self-Confidence"         value={evaluation.criteria.selfConfidence}       onChange={v => handleRating('selfConfidence', v)} />
                         </div>
                     </div>
 
-                    {/* Synthesis Card */}
-                    <div className="bg-white border border-slate-200/60 rounded-[32px] p-8 shadow-sm">
-                        <div className="flex items-center gap-4 mb-8 border-b border-slate-50 pb-6">
-                            <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl border border-amber-100"><Activity size={20} /></div>
+                    {/* Written Evaluation */}
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
+                            <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center border border-amber-100">
+                                <Activity size={16} className="text-amber-600" />
+                            </div>
                             <div>
-                                <h2 className="text-xl font-black tracking-tight text-slate-900">Audit Synthesis</h2>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Qualitative Candidate Logic</p>
+                                <h2 className="text-[15px] font-semibold text-slate-900">Written Evaluation</h2>
+                                <p className="text-[12px] text-slate-400 mt-0.5">Qualitative assessment of the candidate</p>
                             </div>
                         </div>
-                        
-                        <div className="space-y-8">
-                            <FormTextarea 
-                                required 
-                                label="Core Strengths"
-                                value={evaluation.strengths} 
-                                onChange={(e: any) => setEvaluation(prev => ({ ...prev, strengths: e.target.value }))} 
-                                placeholder="Analyze primary performance metrics..."
+
+                        <div className="px-6 py-5 space-y-5">
+                            <FormTextarea
+                                required
+                                label="Strengths"
+                                value={evaluation.strengths}
+                                onChange={(e: any) => setEvaluation(prev => ({ ...prev, strengths: e.target.value }))}
+                                placeholder="Describe the candidate's key strengths..."
                             />
-                            <FormTextarea 
-                                required 
-                                label="Optimization Areas"
-                                value={evaluation.improvements} 
-                                onChange={(e: any) => setEvaluation(prev => ({ ...prev, improvements: e.target.value }))} 
-                                placeholder="Identify vectors for talent development..."
+                            <FormTextarea
+                                required
+                                label="Areas for Improvement"
+                                value={evaluation.improvements}
+                                onChange={(e: any) => setEvaluation(prev => ({ ...prev, improvements: e.target.value }))}
+                                placeholder="Describe areas where the candidate can improve..."
                             />
-                            <FormTextarea 
-                                required 
-                                label="Executive Summary"
-                                value={evaluation.comments} 
-                                onChange={(e: any) => setEvaluation(prev => ({ ...prev, comments: e.target.value }))} 
-                                placeholder="Consolidated synthesis of potential..."
+                            <FormTextarea
+                                required
+                                label="Overall Comments"
+                                value={evaluation.comments}
+                                onChange={(e: any) => setEvaluation(prev => ({ ...prev, comments: e.target.value }))}
+                                placeholder="General remarks and recommendation..."
                             />
                         </div>
                     </div>
 
-                    {/* Finalization Card */}
-                    <div className="bg-white border border-slate-200/60 rounded-[32px] p-8 shadow-xl shadow-indigo-600/5 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/5 blur-[100px] pointer-events-none group-hover:bg-indigo-600/10 transition-colors duration-700" />
-                        <div className="flex items-center gap-6 relative z-10">
-                            <div className="p-4 bg-slate-900 text-white rounded-2xl shadow-lg shadow-slate-900/10 transition-transform group-hover:scale-110 duration-500">
-                                <Target size={24} />
+                    {/* Submit */}
+                    <div className="bg-white border border-slate-200 rounded-2xl px-6 py-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shrink-0">
+                                <Target size={18} className="text-white" />
                             </div>
                             <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Final Result Aggregate</p>
+                                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Overall Score</p>
                                 <div className="flex items-baseline gap-2">
-                                    <div className="relative group/score">
-                                        <input 
-                                            type="number" 
-                                            min="1" 
-                                            max="10" 
-                                            step="0.1" 
-                                            value={evaluation.overallScore} 
-                                            onChange={(e) => setEvaluation(prev => ({ ...prev, overallScore: Math.min(10, parseFloat(e.target.value) || 0) }))} 
-                                            className="w-20 bg-slate-50 border border-slate-200 rounded-xl py-2 text-2xl font-black text-indigo-600 text-center outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all tabular-nums" 
-                                        />
-                                    </div>
-                                    <span className="text-slate-400 text-lg font-black tracking-tighter">/ 10</span>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="10"
+                                        step="0.1"
+                                        value={evaluation.overallScore || ''}
+                                        onChange={e => setEvaluation(prev => ({ ...prev, overallScore: Math.min(10, parseFloat(e.target.value) || 0) }))}
+                                        placeholder="0"
+                                        className="w-20 bg-slate-50 border border-slate-200 rounded-xl py-2 text-2xl font-bold text-blue-600 text-center outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                                    />
+                                    <span className="text-slate-400 text-[15px] font-medium">/ 10</span>
                                 </div>
                             </div>
                         </div>
-                        <button type="submit" className="w-full md:w-auto px-12 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[18px] font-black text-[12px] uppercase tracking-[0.15em] transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-indigo-600/20 group-hover:-translate-y-1 duration-300">
-                            <Save size={18} />
-                            Finalize Evaluation
+                        <button
+                            type="submit"
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[13px] font-semibold transition-all shadow-sm active:scale-95"
+                        >
+                            <Save size={16} />
+                            Submit Evaluation
                         </button>
                     </div>
                 </form>
@@ -244,39 +271,38 @@ const EvaluationPage = () => {
     );
 };
 
-const RatingRow = ({ label, value, onChange }: { label: string, value: number, onChange: (v: number) => void }) => (
-    <div className="flex flex-col lg:flex-row items-center justify-between py-6 gap-6 group">
-        <div className="text-[14px] font-black text-slate-900 tracking-tight group-hover:text-indigo-600 transition-colors">{label}</div>
-        <div className="flex items-center gap-4">
-            <div className="flex gap-1 p-1 bg-slate-50 border border-slate-100 rounded-xl">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                    <button 
-                        key={n} 
-                        type="button" 
-                        onClick={() => onChange(n)} 
-                        className={`w-9 h-9 rounded-lg text-[11px] font-black transition-all ${value === n 
-                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 scale-110' 
-                            : 'text-slate-400 hover:bg-white hover:text-slate-900 hover:shadow-sm'
-                        }`}
-                    >
-                        {n}
-                    </button>
-                ))}
-            </div>
+const RatingRow = ({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) => (
+    <div className="flex flex-col lg:flex-row lg:items-center justify-between py-4 gap-3">
+        <span className="text-[13px] font-medium text-slate-700 lg:w-44 shrink-0">{label}</span>
+        <div className="flex gap-1.5 flex-wrap">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                <button
+                    key={n}
+                    type="button"
+                    onClick={() => onChange(n)}
+                    className={`w-9 h-9 rounded-lg text-[12px] font-semibold transition-all border ${
+                        value === n
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20'
+                            : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600'
+                    }`}
+                >
+                    {n}
+                </button>
+            ))}
         </div>
     </div>
 );
 
 const FormTextarea = ({ label, required, value, onChange, placeholder }: any) => (
-    <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label} {required && <span className="text-rose-500">*</span>}</label>
-        </div>
-        <textarea 
+    <div className="space-y-2">
+        <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            {label} {required && <span className="text-red-400">*</span>}
+        </label>
+        <textarea
             required={required}
             value={value}
             onChange={onChange}
-            className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-32 p-4 text-sm font-bold text-slate-900 placeholder-slate-400 focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-200 outline-none resize-none transition-all leading-relaxed"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl h-28 p-4 text-[13px] text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none resize-none transition-all leading-relaxed"
             placeholder={placeholder}
         />
     </div>

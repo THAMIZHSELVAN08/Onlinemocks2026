@@ -1,4 +1,5 @@
 // src/routes/admin.ts
+// Re-check after prisma generate
 import { InterviewStatus } from "@prisma/client";
 import express from "express";
 import multer from "multer";
@@ -12,6 +13,7 @@ import { validate } from "../middleware/validate";
 import {
   AdminRegisterHrSchema,
   AdminRegisterVolunteerSchema,
+  AdminRegisterPipelineSchema,
   StudentTransferSchema,
   StudentSearchQuerySchema,
   HrIdParamSchema,
@@ -117,7 +119,7 @@ router.get("/stats", auth, checkRole(["ADMIN"]), async (_req, res) => {
 
 // ── GET /students/all ────────────────────────────────────────────────────────
 
-router.get("/students/all", auth, checkRole(["ADMIN"]), async (_req, res) => {
+router.get("/students/all", auth, checkRole(["ADMIN", "PIPELINE"]), async (_req, res) => {
   try {
     const students = await prisma.student.findMany({
       include: {
@@ -138,8 +140,8 @@ router.get("/students/all", auth, checkRole(["ADMIN"]), async (_req, res) => {
     const result = students.map((s) => ({
       ...s,
       register_number: s.registerNumber,
-      hr_name: s.assignments[0]?.hr?.hrProfile?.name ?? "Unallocated",
-      hr_company: s.assignments[0]?.hr?.hrProfile?.companyName ?? null,
+      hr_name: s.assignments.map(a => a.hr?.hrProfile?.name).filter(Boolean).join(", ") || "Unallocated",
+      hr_company: s.assignments.map(a => a.hr?.hrProfile?.companyName).filter(Boolean).join(", ") || null,
       evaluation_status: s.evaluations.length > 0 ? "COMPLETED" : "PENDING",
     }));
 
@@ -202,7 +204,7 @@ router.get(
 router.get(
   "/students/global",
   auth,
-  checkRole(["ADMIN"]),
+  checkRole(["ADMIN", "PIPELINE"]),
   async (req, res) => {
     const { query } = req.query as { query: string };
     if (!query) return res.json([]);
@@ -230,7 +232,8 @@ router.get(
       const result = students.map((s) => ({
         ...s,
         register_number: s.registerNumber,
-        hr_name: s.assignments[0]?.hr.hrProfile?.name || "Unassigned",
+        hr_name: s.assignments.map(a => a.hr.hrProfile?.name).filter(Boolean).join(", ") || "Unassigned",
+        status: s.assignments[0]?.status || "UNASSIGNED",
       }));
 
       res.json(result);
@@ -242,7 +245,7 @@ router.get(
 
 // ── GET /hrs ─────────────────────────────────────────────────────────────────
 
-router.get("/hrs", auth, checkRole(["ADMIN"]), async (_req, res) => {
+router.get("/hrs", auth, checkRole(["ADMIN", "PIPELINE"]), async (_req, res) => {
   try {
     const hrs = await prisma.hrProfile.findMany({
       orderBy: { name: "asc" },
@@ -289,7 +292,7 @@ router.get("/hrs", auth, checkRole(["ADMIN"]), async (_req, res) => {
 router.get(
   "/hrs/:hrId/students",
   auth,
-  checkRole(["ADMIN"]),
+  checkRole(["ADMIN", "PIPELINE"]),
   validate(HrIdParamSchema, "params"),
   async (req, res) => {
     try {
@@ -324,7 +327,7 @@ router.get(
 
 // ── GET /volunteers ──────────────────────────────────────────────────────────
 
-router.get("/volunteers", auth, checkRole(["ADMIN"]), async (_req, res) => {
+router.get("/volunteers", auth, checkRole(["ADMIN", "PIPELINE"]), async (_req, res) => {
   try {
     const volunteers = await prisma.volunteerProfile.findMany({
       orderBy: { name: "asc" },
@@ -349,12 +352,37 @@ router.get("/volunteers", auth, checkRole(["ADMIN"]), async (_req, res) => {
   }
 });
 
+// ── GET /pipeline ────────────────────────────────────────────────────────────
+
+router.get("/pipeline", auth, checkRole(["ADMIN"]), async (_req, res) => {
+  try {
+    const pipelines = await prisma.pipelineProfile.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        user: { select: { username: true, plainPassword: true } },
+      },
+    });
+
+    const result = pipelines.map((p: any) => ({
+      ...p,
+      username: p.user.username,
+      plain_password: p.user.plainPassword,
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server Error");
+  }
+});
+
+
 // ── POST /students/transfer ──────────────────────────────────────────────────
 
 router.post(
   "/students/transfer",
   auth,
-  checkRole(["ADMIN"]),
+  checkRole(["ADMIN", "PIPELINE"]),
   validate(StudentTransferSchema),
   async (req, res) => {
     if (!req.user) {
@@ -376,44 +404,38 @@ router.post(
 
         for (const studentId of studentIds) {
           currentOrder++;
-          console.log(`Processing student ${studentId} -> New order ${currentOrder}`);
-          
-          const assignment = await tx.hrAssignment.findFirst({
+          console.log(`Processing transfer for student ${studentId} to ${targetHrId}`);
+
+          // Find one previous HR assignment to use as fromHrId for logging
+          const previousAssignment = await tx.hrAssignment.findFirst({
             where: { studentId },
           });
 
-          if (assignment) {
-            // Log transfer
-            await tx.studentTransfer.create({
-              data: {
-                studentId,
-                fromHrId: assignment.hrId,
-                toHrId: targetHrId,
-                adminId,
-                transferReason: reason,
-              },
-            });
+          // Remove student from ALL existing assignments to ensure it's a "move" rather than "add"
+          await tx.hrAssignment.deleteMany({
+            where: { studentId },
+          });
 
-            // Update assignment
-            await tx.hrAssignment.update({
-              where: { id: assignment.id },
-              data: {
-                hrId: targetHrId,
-                order: currentOrder,
-                status: InterviewStatus.PENDING,
-              },
-            });
-          } else {
-            // Create new assignment for unassigned student
-            await tx.hrAssignment.create({
-              data: {
-                studentId,
-                hrId: targetHrId,
-                order: currentOrder,
-                status: InterviewStatus.PENDING,
-              },
-            });
-          }
+          // Create the new assignment for the target HR
+          await tx.hrAssignment.create({
+            data: {
+              studentId,
+              hrId: targetHrId,
+              order: currentOrder,
+              status: InterviewStatus.PENDING,
+            },
+          });
+
+          // Log the actual transfer in the history table
+          await tx.studentTransfer.create({
+            data: {
+              studentId,
+              fromHrId: previousAssignment?.hrId || null,
+              toHrId: targetHrId,
+              adminId,
+              transferReason: reason || "Administrative Transfer",
+            },
+          });
         }
       });
 
@@ -431,6 +453,16 @@ router.post(
 
         // Notify the target HR
         io.to(targetHrId).emit("student_transferred", payload);
+        
+        // SAVE NOTIFICATION FOR HR
+        await prisma.notification.create({
+          data: {
+            receiverId: targetHrId,
+            title: "Student Transfer",
+            message: payload.message,
+            type: "TRANSFER",
+          } as any
+        });
 
         // Notify all volunteers assigned to this HR
         const volunteers = await prisma.volunteerProfile.findMany({
@@ -439,6 +471,15 @@ router.post(
         });
         for (const v of volunteers) {
           io.to(v.id).emit("student_transferred", payload);
+          // SAVE NOTIFICATION FOR VOLUNTEER
+          await prisma.notification.create({
+            data: {
+              receiverId: v.id,
+              title: "New Students Assigned",
+              message: payload.message,
+              type: "TRANSFER",
+            } as any
+          });
         }
       }
 
@@ -454,7 +495,7 @@ router.post(
 router.post(
   "/notify",
   auth,
-  checkRole(["ADMIN"]),
+  checkRole(["ADMIN", "PIPELINE"]),
   async (req, res) => {
     const { title, message, hrIds, volunteerIds } = req.body;
 
@@ -506,7 +547,7 @@ router.post(
 
       await Promise.all(
         files.map((file) => {
-          const registerNumber = path.parse(file.originalname).name;
+          const registerNumber = path.parse(file.originalname).name.trim();
           return prisma.student.updateMany({
             where: { registerNumber },
             data: { resumeUrl: `/uploads/resumes/${file.originalname}` },
@@ -667,6 +708,46 @@ router.post(
   },
 );
 
+// ── POST /register/pipeline ──────────────────────────────────────────────────
+
+router.post(
+  "/register/pipeline",
+  auth,
+  checkRole(["ADMIN"]),
+  validate(AdminRegisterPipelineSchema),
+  async (req, res) => {
+    const { username, password, name } = req.body;
+
+    try {
+      const existing = await prisma.user.findUnique({ where: { username } });
+      if (existing) {
+        return res.status(400).json({ message: "User already exists" });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(password, salt);
+
+      await prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: { username, passwordHash, role: "PIPELINE", plainPassword: password },
+        });
+        await tx.pipelineProfile.create({
+          data: {
+            id: user.id,
+            name,
+          },
+        });
+      });
+
+      res.json({ message: "Pipeline User Registered Successfully" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).send("Server Error");
+    }
+  },
+);
+
+
 router.post(
   "/reset-password/:userId",
   auth,
@@ -762,7 +843,7 @@ router.get(
 router.post(
   "/add-student",
   auth,
-  checkRole(["ADMIN"]),
+  checkRole(["ADMIN", "PIPELINE"]),
   async (req, res) => {
     const { name, register_number, department, resume_url, hr_id } = req.body;
 

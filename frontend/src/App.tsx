@@ -4,8 +4,8 @@ import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import HRDashboard from './pages/HRDashboard';
 import EvaluationPage from './pages/EvaluationPage';
-import StudentDashboard from './pages/StudentDashboard';
 import VolunteerDashboard from './pages/VolunteerDashboard';
+import PipelineDashboard from './pages/PipelineDashboard';
 import { Toaster } from 'sonner';
 import './App.css';
 
@@ -18,6 +18,10 @@ function App() {
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/login" element={<Navigate to="/" />} />
+          <Route
+            path="/pipeline/*"
+            element={user?.role === 'PIPELINE' || user?.role === 'ADMIN' ? <PipelineDashboard /> : <Navigate to="/login" />}
+          />
           <Route
             path="/admin/*"
             element={user?.role === 'ADMIN' ? <AdminDashboard /> : <Navigate to="/login" />}
@@ -33,10 +37,6 @@ function App() {
           <Route
             path="/volunteer/*"
             element={user?.role === 'VOLUNTEER' ? <VolunteerDashboard /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/student/*"
-            element={user?.role === 'STUDENT' ? <StudentDashboard /> : <Navigate to="/login" />}
           />
         </Routes>
         <Toaster

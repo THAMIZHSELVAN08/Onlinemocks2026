@@ -259,6 +259,60 @@ router.patch(
   },
 );
 //Create a feature for changing order of students
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+router.get("/notifications", auth, async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+    const notifications = await prisma.notification.findMany({
+      where: { receiverId: req.user.id },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(notifications);
+  } catch (err) {
+    res.status(500).send("Server Error");
+  }
+});
+
+router.patch("/notifications/:id/read", auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (typeof id !== "string") return res.status(400).json({ message: "Invalid ID" });
+    await prisma.notification.update({
+      where: { id },
+      data: { isRead: true },
+    });
+    res.json({ message: "Marked as read" });
+  } catch (err) {
+    res.status(500).send("Server Error");
+  }
+});
+
+router.post("/notifications/read-all", auth, async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+    await prisma.notification.updateMany({
+      where: { receiverId: req.user.id, isRead: false },
+      data: { isRead: true },
+    });
+    res.json({ message: "All marked as read" });
+  } catch (err) {
+    res.status(500).send("Server Error");
+  }
+});
+
+router.delete("/notifications/:id", auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (typeof id !== "string") return res.status(400).json({ message: "Invalid ID" });
+    await prisma.notification.delete({
+      where: { id },
+    });
+    res.json({ message: "Notification deleted" });
+  } catch (err) {
+    res.status(500).send("Server Error");
+  }
+});
+
 export default router;
 
 registry.registerPath({

@@ -38,8 +38,8 @@ export const RegisterSchema = z
   .object({
     username: z.string().min(1).max(100),
     password: passwordSchema,
-    role: z.enum(["HR", "STUDENT", "VOLUNTEER", "ADMIN"], {
-      error: "Role must be HR, STUDENT, or VOLUNTEER",
+    role: z.enum(["HR", "VOLUNTEER", "ADMIN", "PIPELINE"], {
+      error: "Role must be HR, VOLUNTEER, ADMIN, or PIPELINE",
     }),
     name: z.string().min(1, "Name is required").max(255).optional(),
     company_name: z.string().max(255).optional(),
@@ -88,6 +88,20 @@ export const AdminRegisterVolunteerSchema = z.object({
 export type AdminRegisterVolunteerInput = z.infer<
   typeof AdminRegisterVolunteerSchema
 >;
+
+// ─────────────────────────────────────────────
+// ADMIN — Register Pipeline
+// ─────────────────────────────────────────────
+
+export const AdminRegisterPipelineSchema = z.object({
+  username: z.string().min(1).max(100),
+  password: passwordSchema,
+  name: z.string().min(1, "Pipeline name is required").max(255),
+});
+export type AdminRegisterPipelineInput = z.infer<
+  typeof AdminRegisterPipelineSchema
+>;
+
 
 // ─────────────────────────────────────────────
 // ADMIN — Bulk Transfer Students
@@ -160,14 +174,7 @@ export const StudentIdParamSchema = z.object({
 });
 export type StudentIdParam = z.infer<typeof StudentIdParamSchema>;
 
-// ─────────────────────────────────────────────
-// STUDENT — Check-in
-// ─────────────────────────────────────────────
 
-export const CheckInSchema = z.object({
-  deviceInfo: z.string().max(500).optional(),
-});
-export type CheckInInput = z.infer<typeof CheckInSchema>;
 
 // ─────────────────────────────────────────────
 // VOLUNTEER — Add Student
@@ -304,8 +311,7 @@ registry.register("EvaluationCriteria", EvaluationCriteriaSchema);
 registry.register("EvaluateStudent", EvaluateStudentSchema);
 registry.register("StudentIdParam", StudentIdParamSchema);
 
-// STUDENT
-registry.register("CheckIn", CheckInSchema);
+
 
 // VOLUNTEER
 registry.register("AddStudent", AddStudentSchema);
