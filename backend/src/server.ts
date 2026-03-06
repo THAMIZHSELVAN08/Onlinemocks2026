@@ -12,15 +12,17 @@ import { generateOpenAPIDocument } from "./openapi";
 const openApiDocument = generateOpenAPIDocument();
 import pipelineRoutes from "./routes/pipeline";
 
+const allowedOrigins = [
+          process.env.FRONTEND_URL,
+            "http://localhost:5173",
+];
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: [
-  "http://localhost:5173",
-  process.env.FRONTEND_URL
-],
+    origin: true,
     methods: ["GET", "POST"],
+    credentials: true
   },
 });
 
@@ -30,7 +32,12 @@ app.use(
     crossOriginResourcePolicy: false, // Required to serve files (resumes)
   }),
 );
-app.use(cors());
+app.use(
+          cors({
+                origin: allowedOrigins,
+                credentials: true,
+          })
+);
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 app.set("socketio", io);
@@ -41,34 +48,34 @@ io.on("connection", (socket) => {
 
   socket.on("join_room", (data) => {
     // Rooms can be 'hr-id' or 'student-id' or 'admin'
-    socket.join(data.room);
-    console.log(`User ${socket.id} joined room ${data.room}`);
-  });
-
-
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
+      socket.join(data.room);                                                                                                                                                          
+    console.log(`User ${socket.id} joined room ${data.room}`);                                                                                                                       
+  });                                                                                                                                                                                
+                                                                                                                                                                                     
+                                                                                                                                                                                     
+                                                                                                                                                                                     
+  socket.on("disconnect", () => {                                                                                                                                                    
+    console.log("User disconnected:", socket.id);                                                                                                                                    
+  });                                                                                                                                                                                
+});                                                                                                                                                                                  
+                                                                                                                                                                                     
+// Routes                                                                                                                                                                            
+app.use("/api/auth", authRoutes);                                                                                                                                                    
+app.use("/api/admin", adminRoutes);                                                                                                                                                  
+app.use("/api/hr", hrRoutes);                                                                                                                                                        
+app.use("/api/volunteer", volunteerRoutes);                                                                                                                                          
+app.use("/api/pipeline", pipelineRoutes);                                                                                                                                            
+app.get("/health", (req, res) => {                                                                                                                                                   
+  res.json({ status: "OK", timestamp: new Date() });                                                                                                                                 
+});                                                                                                                                                                                  
+                                                                                                                                                                                     
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));                                                                                                                 
+app.get("/openapi.json", (_req, res) => {                                                                                                                                            
+  res.json(openApiDocument);                                                                                                                                                         
 });
-
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/hr", hrRoutes);
-app.use("/api/volunteer", volunteerRoutes);
-app.use("/api/pipeline", pipelineRoutes);
-app.get("/health", (req, res) => {
-  res.json({ status: "OK", timestamp: new Date() });
-});
-
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
-app.get("/openapi.json", (_req, res) => {
-  res.json(openApiDocument);
-});
-
-// Start Server
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+                                                                                                                                                                                     
+// Start Server                                                                                                                                                                      
+const PORT = process.env.PORT || 5000;                                                                                                                                               
+server.listen(PORT, () => {                                                                                                                                                          
+  console.log(`Server running on port ${PORT}`);                                                                                                                                     
+});                                                                                                                                                                                  
