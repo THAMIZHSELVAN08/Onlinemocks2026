@@ -96,7 +96,13 @@ router.get(
           hrId: req.user.id,
         },
         include: {
-          student: true,
+          student: {
+            include: {
+              evaluations: {
+                where: { hrId: req.user.id }
+              }
+            }
+          },
         },
       });
 
@@ -110,6 +116,7 @@ router.get(
         assignmentId: assignment.id,
         order: assignment.order,
         status: assignment.status,
+        evaluation: assignment.student.evaluations[0] || null,
         current_date: new Date().toISOString().split("T")[0],
       });
     } catch (err) {

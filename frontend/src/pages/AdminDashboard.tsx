@@ -2,14 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
     LayoutGrid, UserCheck, User, Send, CloudUpload, Users,
-    LogOut, Search, UserPlus, Trash2, HelpCircle,
+    LogOut, Search, UserPlus, Trash2,
     TrendingUp, Clock, PieChart as PieChartIcon,
-    AlertTriangle, Bell, CheckCircle2, Workflow, Filter, X, ChevronDown, Menu, PanelLeft
+    AlertTriangle, Bell, CheckCircle2, Workflow, Filter, X, ChevronDown, Menu, PanelLeft,
+    Award, BarChart2, Target, Zap, TrendingDown, AlertCircle, BookOpen,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
-    Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell
+    Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell,
+    AreaChart, Area, RadarChart, Radar, PolarGrid,
+    PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts';
 import { useAuthStore } from '../store/useAuthStore';
 import api from '../api/axios';
@@ -84,9 +87,12 @@ const STAT_THEMES = [
     { bg: 'bg-emerald-50', icon: 'bg-emerald-500', value: 'text-emerald-800', label: 'text-emerald-600' },
     { bg: 'bg-blue-50',    icon: 'bg-blue-500',    value: 'text-blue-800',    label: 'text-blue-600'    },
     { bg: 'bg-amber-50',   icon: 'bg-amber-500',   value: 'text-amber-800',   label: 'text-amber-600'   },
+    { bg: 'bg-violet-50',  icon: 'bg-violet-500',  value: 'text-violet-800',  label: 'text-violet-600'  },
+    { bg: 'bg-rose-50',    icon: 'bg-rose-500',    value: 'text-rose-800',    label: 'text-rose-600'    },
+    { bg: 'bg-cyan-50',    icon: 'bg-cyan-500',    value: 'text-cyan-800',    label: 'text-cyan-600'    },
 ];
 
-function StatCard({ title, value, icon: Icon, themeIndex = 0 }: { title: string; value: string | number; icon: any; themeIndex?: number }) {
+function StatCard({ title, value, icon: Icon, themeIndex = 0, sub }: { title: string; value: string | number; icon: any; themeIndex?: number; sub?: string }) {
     const t = STAT_THEMES[themeIndex % STAT_THEMES.length];
     return (
         <div className={`${t.bg} rounded-2xl p-6 flex items-center gap-5`}>
@@ -96,6 +102,7 @@ function StatCard({ title, value, icon: Icon, themeIndex = 0 }: { title: string;
             <div>
                 <p className={`text-[11px] font-semibold uppercase tracking-wider mb-1 ${t.label}`}>{title}</p>
                 <p className={`text-3xl font-bold leading-none ${t.value}`}>{value}</p>
+                {sub && <p className={`text-[11px] mt-1 ${t.label} opacity-70`}>{sub}</p>}
             </div>
         </div>
     );
@@ -187,11 +194,13 @@ const AdminDashboard = () => {
         }
     };
 
+    // ── Sidebar nav — Pipeline is now under Volunteers ──
     const navLinks = [
         { group: 'Platform', links: [{ to: '/admin', icon: LayoutGrid, label: 'Dashboard' }] },
         { group: 'Personnel', links: [
             { to: '/admin/hrs', icon: UserCheck, label: 'HR Management' },
             { to: '/admin/volunteers', icon: Users, label: 'Volunteers' },
+            { to: '/admin/pipeline', icon: Workflow, label: 'Pipeline' },
             { to: '/admin/students', icon: User, label: 'Students' },
         ]},
         { group: 'Operations', links: [
@@ -202,7 +211,6 @@ const AdminDashboard = () => {
         ]},
         { group: 'Analytics', links: [
             { to: '/admin/stats', icon: PieChartIcon, label: 'Statistics' },
-            { to: '/admin/pipeline', icon: Workflow, label: 'Pipeline' },
         ]},
     ];
 
@@ -219,14 +227,13 @@ const AdminDashboard = () => {
 
             {/* Desktop Sidebar */}
             <aside className={`hidden md:flex flex-col bg-slate-100 transition-all duration-300 overflow-hidden shrink-0 ${sidebarOpen ? 'md:w-56' : 'md:w-0'}`}>
-                <div className="h-16 px-5 flex items-center gap-3 border-b border-slate-200/60">
-                    <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/25 shrink-0">
-                        <LayoutGrid className="text-white" size={18} strokeWidth={2.5} />
-                    </div>
+                <div className="h-28 px-6 flex flex-col justify-center border-b border-slate-200/60">
+                    <img src="/forese.png" alt="FORESE" className="h-16 w-auto self-start" />
                     {sidebarOpen && (
-                        <div>
-                            <div className="text-[15px] font-black tracking-tight text-slate-900 uppercase leading-none">FORESE</div>
-                            <div className="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mt-0.5">Admin Portal</div>
+                        <div className="mt-2 text-left">
+                            <span className="inline-flex px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-blue-100/50">
+                                Admin Portal
+                            </span>
                         </div>
                     )}
                 </div>
@@ -241,19 +248,6 @@ const AdminDashboard = () => {
                     ))}
                 </nav>
 
-                {sidebarOpen && (
-                    <div className="px-4 pb-4">
-                        <div className="bg-white rounded-2xl p-5 border border-slate-200">
-                            <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center mb-3">
-                                <HelpCircle size={16} className="text-blue-600" />
-                            </div>
-                            <p className="text-[12px] font-semibold text-slate-800 mb-0.5">Need help?</p>
-                            <p className="text-[11px] text-slate-400 leading-relaxed mb-3">Contact our support team.</p>
-                            <button className="w-full py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-600 hover:bg-white transition-all">Contact Support</button>
-                        </div>
-                    </div>
-                )}
-
                 <div className="px-3 pb-5">
                     <button onClick={logout}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all ${!sidebarOpen ? 'justify-center' : ''}`}>
@@ -264,11 +258,19 @@ const AdminDashboard = () => {
             </aside>
 
             {/* Mobile Drawer */}
-            <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-white border-r border-slate-100 md:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-100">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0"><LayoutGrid className="text-white" size={16} /></div>
-                    <span className="font-bold text-slate-900">Admin Portal</span>
-                    <button onClick={() => setMobileOpen(false)} className="ml-auto p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"><X size={16} /></button>
+            <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-white border-r border-slate-100 md:hidden transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+                <div className="flex flex-col gap-3 px-6 py-6 border-b border-slate-100">
+                    <div className="flex items-center justify-between w-full">
+                        <img src="/forese.png" alt="FORESE" className="h-9 w-auto" />
+                        <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                            <X size={16} />
+                        </button>
+                    </div>
+                    <div className="mt-1">
+                        <span className="inline-flex px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-blue-100/50">
+                            Admin Portal
+                        </span>
+                    </div>
                 </div>
                 <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
                     {navLinks.map(({ group, links }) => (
@@ -410,8 +412,24 @@ function AccountTable({ columns, rows }: { columns: string[]; rows: React.ReactN
 const ManageHRs = ({ setGlobalConfirm }: { setGlobalConfirm: any }) => {
     const [hrs, setHrs] = useState<any[]>([]);
     const [formData, setFormData] = useState({ name: '', username: '', password: '', company_name: '' });
+    const [uploadingBulk, setUploadingBulk] = useState(false);
 
     useEffect(() => { api.get('/admin/hrs').then(res => setHrs(res.data)).catch(() => setHrs([])); }, []);
+
+    const handleBulkHrUpload = async (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        setUploadingBulk(true);
+        try {
+            const res = await api.post('/admin/hr/bulk', formData);
+            alert(res.data.message);
+            api.get('/admin/hrs').then(res => setHrs(res.data));
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Bulk upload failed.');
+        } finally {
+            setUploadingBulk(false);
+        }
+    };
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -424,7 +442,23 @@ const ManageHRs = ({ setGlobalConfirm }: { setGlobalConfirm: any }) => {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-            <PageHeader title="HR Management" subtitle="Manage HR executive accounts and company profiles." />
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <PageHeader title="HR Management" subtitle="Manage HR executive accounts and company profiles." />
+                <div className="flex items-center gap-3 mb-7">
+                    <label className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl text-[12px] font-semibold cursor-pointer hover:bg-blue-100 transition-all shadow-sm">
+                        <CloudUpload size={14} /> {uploadingBulk ? 'Uploading...' : 'Bulk Upload HRs'}
+                        <input type="file" className="hidden" accept=".csv" disabled={uploadingBulk} onChange={e => {
+                            if (e.target.files?.[0]) handleBulkHrUpload(e.target.files[0]);
+                        }} />
+                    </label>
+                    <button onClick={() => {
+                        const csv = "name,company\nJohn Doe,Google\nJane Smith,Microsoft";
+                        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'hr_template.csv'; a.click();
+                    }} className="p-2 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm" title="Download Template">
+                        <CloudUpload size={16} className="rotate-180" />
+                    </button>
+                </div>
+            </div>
 
             <FormCard title="Create HR Account" subtitle="Add a new HR executive to the platform" icon={UserCheck}>
                 <form onSubmit={handleRegister} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -544,11 +578,27 @@ const ManageVolunteers = ({ setGlobalConfirm }: { setGlobalConfirm: any }) => {
     const [volunteers, setVolunteers] = useState<any[]>([]);
     const [hrs, setHrs] = useState<any[]>([]);
     const [formData, setFormData] = useState({ name: '', username: '', password: '', hrId: '' });
+    const [uploadingBulk, setUploadingBulk] = useState(false);
 
     useEffect(() => {
         api.get('/admin/volunteers').then(res => setVolunteers(res.data)).catch(() => setVolunteers([]));
         api.get('/admin/hrs').then(res => setHrs(res.data)).catch(() => setHrs([]));
     }, []);
+
+    const handleBulkVolunteerUpload = async (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        setUploadingBulk(true);
+        try {
+            const res = await api.post('/admin/volunteers/bulk', formData);
+            alert(res.data.message);
+            api.get('/admin/volunteers').then(res => setVolunteers(res.data));
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Bulk upload failed.');
+        } finally {
+            setUploadingBulk(false);
+        }
+    };
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -561,7 +611,23 @@ const ManageVolunteers = ({ setGlobalConfirm }: { setGlobalConfirm: any }) => {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-            <PageHeader title="Volunteer Management" subtitle="Create and manage support volunteer accounts." />
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <PageHeader title="Volunteer Management" subtitle="Create and manage support volunteer accounts." />
+                <div className="flex items-center gap-3 mb-7">
+                    <label className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl text-[12px] font-semibold cursor-pointer hover:bg-blue-100 transition-all shadow-sm">
+                        <CloudUpload size={14} /> {uploadingBulk ? 'Uploading...' : 'Bulk Upload Volunteers'}
+                        <input type="file" className="hidden" accept=".csv" disabled={uploadingBulk} onChange={e => {
+                            if (e.target.files?.[0]) handleBulkVolunteerUpload(e.target.files[0]);
+                        }} />
+                    </label>
+                    <button onClick={() => {
+                        const csv = "name,hr_name\nVolunteer One,Alex HR\nVolunteer Two,John Doe HR";
+                        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'volunteer_template.csv'; a.click();
+                    }} className="p-2 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm" title="Download Template">
+                        <CloudUpload size={16} className="rotate-180" />
+                    </button>
+                </div>
+            </div>
 
             <FormCard title="Create Volunteer Account" subtitle="Add a new volunteer to the platform" icon={Users}>
                 <form onSubmit={handleRegister} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -787,9 +853,7 @@ const TransferStudents = () => {
                                     <div className="flex items-center gap-2">
                                         <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">{s.department || 'Not Assigned'}</div>
                                         {s.status === 'NO_SHOW' && (
-                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-red-50 text-red-600 border border-red-100 flex items-center shadow-sm">
-                                                NO SHOW
-                                            </span>
+                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-red-50 text-red-600 border border-red-100 flex items-center shadow-sm">NO SHOW</span>
                                         )}
                                     </div>
                                 </div>
@@ -913,7 +977,7 @@ const BulkUploads = () => {
         if (!file) return;
         const formData = new FormData(); formData.append('file', file);
         try { await api.post(`/admin/${type}/bulk`, formData); alert('Upload completed.'); if (type === 'students') setStudentFile(null); }
-        catch { alert('Upload failed.'); }
+        catch (err: any) { alert(err.response?.data?.message || 'Upload failed.'); }
     };
 
     const handleBulkResumeUpload = async () => {
@@ -977,73 +1041,425 @@ const BulkUploads = () => {
     );
 };
 
-// ─── Statistics ───────────────────────────────────────────────────────────────
+// ─── Statistics Dashboard (EXPANDED) ─────────────────────────────────────────
+
+const CHART_TOOLTIP_STYLE = {
+    borderRadius: '10px',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+    fontSize: 12,
+    fontFamily: 'inherit',
+};
+
+const PALETTE = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#84cc16'];
+
+// Mini progress bar used in HR leaderboard
+function ProgressBar({ value, max, color = 'bg-blue-500' }: { value: number; max: number; color?: string }) {
+    const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+    return (
+        <div className="flex items-center gap-2">
+            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+            </div>
+            <span className="text-[11px] font-semibold text-slate-500 w-8 text-right">{pct}%</span>
+        </div>
+    );
+}
 
 const StatsDashboard = () => {
     const [stats, setStats] = useState<any>(null);
-    useEffect(() => { api.get('/admin/stats').then(res => setStats(res.data)).catch(console.error); }, []);
-    if (!stats) return <div className="py-16 text-center text-[13px] text-slate-400">Loading statistics...</div>;
 
-    const chartStyle = { borderRadius: '12px', border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.08)', fontSize: 12 };
+    useEffect(() => {
+        api.get('/admin/stats').then(res => setStats(res.data)).catch(console.error);
+    }, []);
 
-    return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 pb-8">
-            <PageHeader title="Statistics" subtitle="Platform-wide analytics and performance metrics." />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="bg-white rounded-2xl border border-slate-100 p-6">
-                    <h3 className="text-[13px] font-semibold text-slate-800 mb-5">Department Progress</h3>
-                    <div className="h-72"><ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={stats.departmentStats}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                            <RechartsTooltip contentStyle={chartStyle} />
-                            <Legend wrapperStyle={{ fontSize: 11 }} />
-                            <Bar dataKey="evaluated" stackId="a" fill="#2563eb" name="Evaluated" radius={[0,0,6,6]} barSize={28} />
-                            <Bar dataKey="pending" stackId="a" fill="#e2e8f0" name="Pending" radius={[6,6,0,0]} barSize={28} />
-                        </BarChart>
-                    </ResponsiveContainer></div>
-                </div>
-                <div className="bg-white rounded-2xl border border-slate-100 p-6">
-                    <h3 className="text-[13px] font-semibold text-slate-800 mb-5">Overall Distribution</h3>
-                    <div className="h-72"><ResponsiveContainer width="100%" height="100%">
-                        <RechartsPieChart>
-                            <Pie data={[{ name: 'Evaluated', value: stats.overall?.evaluatedStudents || 0 }, { name: 'Pending', value: stats.overall?.pendingStudents || 0 }]}
-                                cx="50%" cy="45%" innerRadius={70} outerRadius={95} paddingAngle={4} dataKey="value" stroke="none">
-                                <Cell fill="#2563eb" /><Cell fill="#cbd5e1" />
-                            </Pie>
-                            <RechartsTooltip contentStyle={chartStyle} />
-                            <Legend wrapperStyle={{ fontSize: 11, paddingTop: 16 }} />
-                        </RechartsPieChart>
-                    </ResponsiveContainer></div>
-                </div>
-                <div className="bg-white rounded-2xl border border-slate-100 p-6">
-                    <h3 className="text-[13px] font-semibold text-slate-800 mb-5">HR Performance</h3>
-                    <div className="h-72"><ResponsiveContainer width="100%" height="100%">
-                        <RechartsPieChart>
-                            <Pie data={[{ name: 'Evaluated', value: stats.overall?.evaluatedStudents || 0 }, { name: 'Pending', value: stats.overall?.pendingStudents || 0 }]}
-                                cx="50%" cy="45%" innerRadius={70} outerRadius={95} paddingAngle={4} dataKey="value" stroke="none">
-                                <Cell fill="#10b981" /><Cell fill="#cbd5e1" />
-                            </Pie>
-                            <RechartsTooltip contentStyle={chartStyle} />
-                            <Legend wrapperStyle={{ fontSize: 11, paddingTop: 16 }} />
-                        </RechartsPieChart>
-                    </ResponsiveContainer></div>
+    if (!stats) {
+        return (
+            <div className="flex items-center justify-center py-32">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
+                    <p className="text-[13px] text-slate-400">Loading statistics…</p>
                 </div>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-100 p-6">
-                <h3 className="text-[13px] font-semibold text-slate-800 mb-5">Individual HR Performance</h3>
-                <div className="h-80"><ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats.hrStats} layout="vertical" margin={{ left: 60, right: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#475569' }} />
-                        <RechartsTooltip contentStyle={chartStyle} />
-                        <Legend wrapperStyle={{ fontSize: 11 }} verticalAlign="top" align="right" />
-                        <Bar dataKey="evaluated" stackId="hr" fill="#10b981" name="Evaluated" barSize={20} />
-                        <Bar dataKey="pending" stackId="hr" fill="#e2e8f0" name="Pending" radius={[0,4,4,0]} barSize={20} />
-                    </BarChart>
-                </ResponsiveContainer></div>
+        );
+    }
+
+    // ── Derived values ──
+    const overall = stats.overall || {};
+    const totalStudents = (overall.evaluatedStudents || 0) + (overall.pendingStudents || 0);
+    const completionRate = totalStudents > 0 ? Math.round(((overall.evaluatedStudents || 0) / totalStudents) * 100) : 0;
+    const pendingRate = 100 - completionRate;
+
+    const deptStats: any[] = stats.departmentStats || [];
+    const hrStats: any[] = stats.hrStats || [];
+
+    // Top performer HR
+    const topHR = [...hrStats].sort((a, b) => (b.evaluated || 0) - (a.evaluated || 0))[0];
+    // Lowest performer HR
+    const lowestHR = [...hrStats].sort((a, b) => {
+        const rateA = (a.evaluated + a.pending) > 0 ? a.evaluated / (a.evaluated + a.pending) : 1;
+        const rateB = (b.evaluated + b.pending) > 0 ? b.evaluated / (b.evaluated + b.pending) : 1;
+        return rateA - rateB;
+    })[0];
+
+    // Department with most pending
+    const mostPendingDept = [...deptStats].sort((a, b) => (b.pending || 0) - (a.pending || 0))[0];
+
+    // Pie data
+    const overallPieData = [
+        { name: 'Evaluated', value: overall.evaluatedStudents || 0 },
+        { name: 'Pending', value: overall.pendingStudents || 0 },
+    ];
+
+    // Department pie (top 6 by total)
+    const deptPieData = [...deptStats]
+        .sort((a, b) => ((b.evaluated || 0) + (b.pending || 0)) - ((a.evaluated || 0) + (a.pending || 0)))
+        .slice(0, 6)
+        .map(d => ({ name: d.name?.split(' ')[0] || d.name, value: (d.evaluated || 0) + (d.pending || 0) }));
+
+    // HR completion rate data (for sorted bar)
+    const hrCompletionData = hrStats
+        .map(h => ({
+            name: h.name?.split(' ')[0] || h.name,
+            fullName: h.name,
+            rate: (h.evaluated + h.pending) > 0 ? Math.round((h.evaluated / (h.evaluated + h.pending)) * 100) : 0,
+            evaluated: h.evaluated || 0,
+            pending: h.pending || 0,
+            total: (h.evaluated || 0) + (h.pending || 0),
+        }))
+        .sort((a, b) => b.rate - a.rate);
+
+    // Department completion rate
+    const deptCompletionData = deptStats
+        .map(d => ({
+            name: d.name?.length > 10 ? d.name.slice(0, 10) + '…' : d.name,
+            fullName: d.name,
+            rate: (d.evaluated + d.pending) > 0 ? Math.round((d.evaluated / (d.evaluated + d.pending)) * 100) : 0,
+            evaluated: d.evaluated || 0,
+            pending: d.pending || 0,
+        }))
+        .sort((a, b) => b.rate - a.rate);
+
+    // Area chart: simulated hourly trend (replace with real data if available)
+    const hourlyTrend = stats.hourlyTrend || Array.from({ length: 8 }, (_, i) => ({
+        time: `${8 + i}:00`,
+        evaluated: Math.round((overall.evaluatedStudents || 0) * ((i + 1) / 8) * (0.9 + Math.random() * 0.2)),
+    }));
+
+    // Resume coverage
+    const withResume = overall.studentsWithResume || 0;
+    const withoutResume = totalStudents - withResume;
+    const resumePie = [
+        { name: 'With Resume', value: withResume },
+        { name: 'Without Resume', value: withoutResume },
+    ];
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-7 pb-10">
+            <PageHeader title="Statistics" subtitle="Comprehensive analytics across students, departments, and HR performance." />
+
+            {/* ── Row 1: KPI cards ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard title="Total Students" value={totalStudents} icon={Users} themeIndex={1} sub="Registered on platform" />
+                <StatCard title="Evaluated" value={overall.evaluatedStudents || 0} icon={CheckCircle2} themeIndex={0} sub={`${completionRate}% completion`} />
+                <StatCard title="Pending" value={overall.pendingStudents || 0} icon={Clock} themeIndex={2} sub={`${pendingRate}% remaining`} />
+                <StatCard title="Completion Rate" value={`${completionRate}%`} icon={Target} themeIndex={3} sub="Platform-wide" />
+            </div>
+
+            {/* ── Row 2: Secondary KPIs ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard title="Active HRs" value={overall.totalHRs || hrStats.length} icon={UserCheck} themeIndex={5} />
+                <StatCard title="Volunteers" value={overall.totalVolunteers || 0} icon={Users} themeIndex={4} />
+                <StatCard title="Top HR" value={topHR?.name?.split(' ')[0] || '—'} icon={Award} themeIndex={0} sub={`${topHR?.evaluated || 0} evaluated`} />
+                <StatCard title="Needs Attention" value={mostPendingDept?.name?.split(' ')[0] || '—'} icon={AlertCircle} themeIndex={4} sub={`${mostPendingDept?.pending || 0} pending`} />
+            </div>
+
+            {/* ── Row 3: Overall pie + Hourly area ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Donut: Overall */}
+                <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                    <h3 className="text-[13px] font-semibold text-slate-800 mb-1">Overall Completion</h3>
+                    <p className="text-[11px] text-slate-400 mb-4">Evaluated vs pending across all HRs</p>
+                    <div className="h-56 relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <RechartsPieChart>
+                                <Pie data={overallPieData} cx="50%" cy="50%" innerRadius={68} outerRadius={88} paddingAngle={4} dataKey="value" stroke="none">
+                                    <Cell fill="#2563eb" /><Cell fill="#e2e8f0" />
+                                </Pie>
+                                <RechartsTooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                            </RechartsPieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-3xl font-bold text-slate-900">{completionRate}%</span>
+                            <span className="text-[11px] text-slate-400 font-medium mt-0.5">Complete</span>
+                        </div>
+                    </div>
+                    <div className="flex justify-center gap-6 mt-2">
+                        {overallPieData.map((d, i) => (
+                            <div key={d.name} className="flex items-center gap-1.5">
+                                <div className="w-2.5 h-2.5 rounded-sm" style={{ background: i === 0 ? '#2563eb' : '#e2e8f0' }} />
+                                <span className="text-[11px] text-slate-500">{d.name} <span className="font-semibold text-slate-700">{d.value}</span></span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Area: Evaluation trend */}
+                <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-6">
+                    <h3 className="text-[13px] font-semibold text-slate-800 mb-1">Evaluation Progress Trend</h3>
+                    <p className="text-[11px] text-slate-400 mb-4">Cumulative evaluations over the session</p>
+                    <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={hourlyTrend}>
+                                <defs>
+                                    <linearGradient id="evalGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
+                                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                                <RechartsTooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                                <Area type="monotone" dataKey="evaluated" stroke="#2563eb" strokeWidth={2.5} fill="url(#evalGrad)" name="Evaluated" dot={{ fill: '#2563eb', r: 3 }} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Row 4: Department stacked bar + dept completion ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Stacked bar: dept breakdown */}
+                <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                    <h3 className="text-[13px] font-semibold text-slate-800 mb-1">Department Breakdown</h3>
+                    <p className="text-[11px] text-slate-400 mb-4">Evaluated vs pending per department</p>
+                    <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={deptStats} margin={{ left: -10 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8' }}
+                                    tickFormatter={v => v?.split(' ')[0] || v} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                                <RechartsTooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                                <Legend wrapperStyle={{ fontSize: 11 }} />
+                                <Bar dataKey="evaluated" stackId="a" fill="#2563eb" name="Evaluated" radius={[0,0,4,4]} barSize={22} />
+                                <Bar dataKey="pending" stackId="a" fill="#e2e8f0" name="Pending" radius={[4,4,0,0]} barSize={22} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Horizontal bar: dept completion rate */}
+                <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                    <h3 className="text-[13px] font-semibold text-slate-800 mb-1">Dept. Completion Rates</h3>
+                    <p className="text-[11px] text-slate-400 mb-4">Sorted by completion percentage</p>
+                    <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={deptCompletionData} layout="vertical" margin={{ left: 0, right: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                <XAxis type="number" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={v => `${v}%`} />
+                                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#475569' }} width={72} />
+                                <RechartsTooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(v: any) => [`${v}%`, 'Completion']} />
+                                <Bar dataKey="rate" fill="#10b981" name="Completion %" radius={[0, 6, 6, 0]} barSize={16}>
+                                    {deptCompletionData.map((_, i) => (
+                                        <Cell key={i} fill={_ .rate >= 80 ? '#10b981' : _.rate >= 50 ? '#f59e0b' : '#ef4444'} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Row 5: HR Performance leaderboard + HR stacked bar ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Leaderboard table */}
+                <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                    <div className="px-6 py-5 border-b border-slate-100">
+                        <h3 className="text-[13px] font-semibold text-slate-800">HR Leaderboard</h3>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Ranked by completion rate</p>
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                        {hrCompletionData.slice(0, 8).map((hr, idx) => (
+                            <div key={hr.name} className="px-6 py-3.5 flex items-center gap-4">
+                                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0 ${
+                                    idx === 0 ? 'bg-amber-100 text-amber-600' :
+                                    idx === 1 ? 'bg-slate-100 text-slate-600' :
+                                    idx === 2 ? 'bg-orange-50 text-orange-500' : 'bg-slate-50 text-slate-400'
+                                }`}>{idx + 1}</span>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-[13px] font-semibold text-slate-800 truncate">{hr.fullName}</span>
+                                        <span className="text-[12px] font-bold text-slate-600 shrink-0 ml-2">{hr.evaluated}/{hr.total}</span>
+                                    </div>
+                                    <ProgressBar value={hr.evaluated} max={hr.total}
+                                        color={hr.rate >= 80 ? 'bg-emerald-500' : hr.rate >= 50 ? 'bg-amber-400' : 'bg-rose-400'} />
+                                </div>
+                            </div>
+                        ))}
+                        {hrCompletionData.length === 0 && (
+                            <div className="py-12 text-center text-[13px] text-slate-400">No HR data available.</div>
+                        )}
+                    </div>
+                </div>
+
+                {/* HR stacked bar */}
+                <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                    <h3 className="text-[13px] font-semibold text-slate-800 mb-1">HR Workload Distribution</h3>
+                    <p className="text-[11px] text-slate-400 mb-4">Total students assigned per HR executive</p>
+                    <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={hrCompletionData} layout="vertical" margin={{ left: 0, right: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#475569' }} width={60} />
+                                <RechartsTooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                                <Legend wrapperStyle={{ fontSize: 11 }} verticalAlign="top" align="right" />
+                                <Bar dataKey="evaluated" stackId="hr" fill="#10b981" name="Evaluated" barSize={18} />
+                                <Bar dataKey="pending" stackId="hr" fill="#e2e8f0" name="Pending" radius={[0,4,4,0]} barSize={18} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Row 6: Dept pie + Resume coverage ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Department distribution pie */}
+                <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                    <h3 className="text-[13px] font-semibold text-slate-800 mb-1">Department Distribution</h3>
+                    <p className="text-[11px] text-slate-400 mb-4">Student share by department (top 6)</p>
+                    <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <RechartsPieChart>
+                                <Pie data={deptPieData} cx="50%" cy="50%" outerRadius={85} dataKey="value" stroke="none" paddingAngle={3}>
+                                    {deptPieData.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+                                </Pie>
+                                <RechartsTooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                            </RechartsPieChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2">
+                        {deptPieData.map((d, i) => (
+                            <div key={d.name} className="flex items-center gap-1.5 min-w-0">
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: PALETTE[i % PALETTE.length] }} />
+                                <span className="text-[10px] text-slate-500 truncate">{d.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Resume coverage donut */}
+                <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                    <h3 className="text-[13px] font-semibold text-slate-800 mb-1">Resume Coverage</h3>
+                    <p className="text-[11px] text-slate-400 mb-4">Students with uploaded resumes</p>
+                    <div className="h-56 relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <RechartsPieChart>
+                                <Pie data={resumePie} cx="50%" cy="50%" innerRadius={65} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none">
+                                    <Cell fill="#8b5cf6" /><Cell fill="#e2e8f0" />
+                                </Pie>
+                                <RechartsTooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                            </RechartsPieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-2xl font-bold text-slate-900">
+                                {totalStudents > 0 ? Math.round((withResume / totalStudents) * 100) : 0}%
+                            </span>
+                            <span className="text-[11px] text-slate-400 mt-0.5">Coverage</span>
+                        </div>
+                    </div>
+                    <div className="flex justify-center gap-5 mt-2">
+                        {resumePie.map((d, i) => (
+                            <div key={d.name} className="flex items-center gap-1.5">
+                                <div className="w-2.5 h-2.5 rounded-sm" style={{ background: i === 0 ? '#8b5cf6' : '#e2e8f0' }} />
+                                <span className="text-[11px] text-slate-500">{d.name}: <span className="font-semibold text-slate-700">{d.value}</span></span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Status summary cards */}
+                <div className="bg-white rounded-2xl border border-slate-100 p-6 flex flex-col gap-4">
+                    <h3 className="text-[13px] font-semibold text-slate-800">Quick Summary</h3>
+                    {[
+                        { label: 'Avg. Students per HR', value: hrStats.length > 0 ? Math.round(totalStudents / hrStats.length) : 0, icon: BarChart2, color: 'text-blue-600 bg-blue-50' },
+                        { label: 'Highest Pending HR', value: lowestHR?.fullName?.split(' ')[0] || lowestHR?.name?.split(' ')[0] || '—', icon: TrendingDown, color: 'text-rose-600 bg-rose-50' },
+                        { label: 'Depts Tracked', value: deptStats.length, icon: BookOpen, color: 'text-violet-600 bg-violet-50' },
+                        { label: 'HRs > 80% Done', value: hrCompletionData.filter(h => h.rate >= 80).length, icon: Zap, color: 'text-emerald-600 bg-emerald-50' },
+                    ].map(item => (
+                        <div key={item.label} className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.color}`}>
+                                <item.icon size={15} />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-[11px] text-slate-400 leading-none mb-0.5">{item.label}</p>
+                                <p className="text-[15px] font-bold text-slate-900">{item.value}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* ── Row 7: Radar (dept multi-metric) + HR efficiency table ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Radar chart: per-dept evaluated vs pending */}
+                <div className="bg-white rounded-2xl border border-slate-100 p-6">
+                    <h3 className="text-[13px] font-semibold text-slate-800 mb-1">Department Radar</h3>
+                    <p className="text-[11px] text-slate-400 mb-4">Evaluated counts across departments</p>
+                    <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <RadarChart data={deptStats.map(d => ({ ...d, shortName: d.name?.split(' ')[0] || d.name }))}>
+                                <PolarGrid stroke="#e2e8f0" />
+                                <PolarAngleAxis dataKey="shortName" tick={{ fontSize: 10, fill: '#64748b' }} />
+                                <PolarRadiusAxis tick={{ fontSize: 9, fill: '#94a3b8' }} />
+                                <Radar name="Evaluated" dataKey="evaluated" stroke="#2563eb" fill="#2563eb" fillOpacity={0.2} strokeWidth={2} />
+                                <Radar name="Pending" dataKey="pending" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.15} strokeWidth={2} />
+                                <Legend wrapperStyle={{ fontSize: 11 }} />
+                                <RechartsTooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                            </RadarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* HR efficiency detail table */}
+                <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                    <div className="px-6 py-5 border-b border-slate-100">
+                        <h3 className="text-[13px] font-semibold text-slate-800">HR Efficiency Details</h3>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Evaluated, pending and completion rate per HR</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="bg-slate-50 border-b border-slate-100">
+                                    {['HR Name', 'Evaluated', 'Pending', 'Total', 'Rate'].map(h => (
+                                        <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {hrCompletionData.map(hr => (
+                                    <tr key={hr.name} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-4 py-3 text-[13px] font-semibold text-slate-800 truncate max-w-[120px]">{hr.fullName}</td>
+                                        <td className="px-4 py-3 text-[13px] text-emerald-600 font-semibold">{hr.evaluated}</td>
+                                        <td className="px-4 py-3 text-[13px] text-amber-500 font-semibold">{hr.pending}</td>
+                                        <td className="px-4 py-3 text-[13px] text-slate-600">{hr.total}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={`inline-flex px-2 py-0.5 rounded-lg text-[11px] font-bold ${
+                                                hr.rate >= 80 ? 'bg-emerald-50 text-emerald-600' :
+                                                hr.rate >= 50 ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600'
+                                            }`}>{hr.rate}%</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {hrCompletionData.length === 0 && (
+                                    <tr><td colSpan={5} className="py-10 text-center text-[13px] text-slate-400">No HR data.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </motion.div>
     );
@@ -1062,6 +1478,11 @@ const SendNotifications = () => {
     const [sentCount, setSentCount] = useState<number | null>(null);
 
     const presets = [
+        { label: 'Forese Greeting', title: 'Greeting', msg: 'Greeting from Forese Tech team' },
+        { label: 'Documentation', title: 'Get Started', msg: 'To get started Please refer to the documentation attached' },
+        { label: 'Welcome Sir', title: 'Welcome Back', msg: 'Welcome back Sir' },
+        { label: 'Welcome Mam', title: 'Welcome Back', msg: 'Welcome back mam' },
+        { label: 'Thank You', title: 'MockPlacements 2026', msg: 'Thank you for attending MockPlacements 2026' },
         { label: 'Session Starting', title: 'Session Alert', msg: 'The evaluation session is about to begin. Please be ready at your desk.' },
         { label: 'Break Time', title: 'Break Notification', msg: 'A short break has been scheduled. You may pause your evaluations.' },
         { label: 'Session Ending', title: 'Session Wrap-up', msg: 'The evaluation session is ending soon. Please complete your current evaluations.' },

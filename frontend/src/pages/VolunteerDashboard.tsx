@@ -4,7 +4,7 @@ import {
     LayoutGrid, UserPlus, LogOut, Users, Activity,
     CheckCircle2, Clock, Menu, X,
     ChevronDown, PanelLeft, User, Search, Filter,
-    HelpCircle, Bell, Star,
+    HelpCircle, Bell, Star, Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
@@ -19,6 +19,18 @@ interface Notification {
   type: string;
   isRead: boolean;
   createdAt: string;
+}
+
+interface FeedbackFormState {
+  clarityOfInstructions: number;
+  hrCooperation: number;
+  organizationOfSchedule: number;
+  softwareEase: number;
+  workloadManagement: number;
+  overallExperience: number;
+  issuesFaced: string;
+  improvementSuggestions: string;
+  additionalComments: string;
 }
 
 // ─── Sidebar Link ─────────────────────────────────────────────────────────────
@@ -129,6 +141,7 @@ const VolunteerDashboard = () => {
     const navLabel =
         location.pathname === '/volunteer' ? 'Dashboard' :
         location.pathname === '/volunteer/notifications' ? 'Notifications' :
+        location.pathname === '/volunteer/feedback' ? 'Event Feedback' :
         location.pathname.startsWith('/volunteer/enroll') ? 'Add Student' : '';
 
     return (
@@ -146,14 +159,13 @@ const VolunteerDashboard = () => {
             {/* Desktop Sidebar */}
             <aside className={`hidden md:flex flex-col bg-slate-100 transition-all duration-300 overflow-hidden shrink-0 ${sidebarOpen ? 'md:w-56' : 'md:w-0'}`}>
                 {/* Brand */}
-                <div className="h-20 px-5 flex items-center gap-3 border-b border-slate-200/60">
-                    <div className="w-9 h-9 bg-emerald-500 rounded-xl flex items-center justify-center shadow-md shadow-emerald-500/25 shrink-0">
-                        <LayoutGrid className="text-white" size={18} strokeWidth={2.5} />
-                    </div>
+                <div className="h-28 px-6 flex flex-col justify-center border-b border-slate-200/60">
+                    <img src="/forese.png" alt="FORESE" className="h-16 w-auto self-start" />
                     {sidebarOpen && (
-                        <div>
-                            <div className="text-[15px] font-black tracking-tight text-slate-900 uppercase leading-none">FORESE</div>
-                            <div className="text-[10px] font-semibold text-emerald-600 uppercase tracking-widest mt-0.5">Volunteer Hub</div>
+                        <div className="mt-2 text-left">
+                            <span className="inline-flex px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-blue-100/50">
+                                Volunteer Portal
+                            </span>
                         </div>
                     )}
                 </div>
@@ -174,22 +186,6 @@ const VolunteerDashboard = () => {
                     <SidebarLink to="/volunteer/docs" icon={HelpCircle} label="Help & Docs" collapsed={!sidebarOpen} />
                 </nav>
 
-                {/* Support card */}
-                {sidebarOpen && (
-                    <div className="px-4 pb-4">
-                        <div className="bg-white rounded-2xl p-5 border border-slate-200">
-                            <div className="w-8 h-8 bg-emerald-50 rounded-xl flex items-center justify-center mb-3">
-                                <HelpCircle size={16} className="text-emerald-600" />
-                            </div>
-                            <p className="text-[12px] font-semibold text-slate-800 mb-0.5">Need help?</p>
-                            <p className="text-[11px] text-slate-400 leading-relaxed mb-3">Contact our support team.</p>
-                            <button className="w-full py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-600 hover:bg-white transition-all">
-                                Contact Support
-                            </button>
-                        </div>
-                    </div>
-                )}
-
                 {/* Logout */}
                 <div className="px-3 pb-5">
                     <button onClick={logout}
@@ -201,15 +197,19 @@ const VolunteerDashboard = () => {
             </aside>
 
             {/* Mobile Drawer */}
-            <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-white border-r border-slate-100 md:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-100">
-                    <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shrink-0">
-                        <LayoutGrid className="text-white" size={16} />
+            <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-white border-r border-slate-100 md:hidden transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+                <div className="flex flex-col gap-3 px-6 py-6 border-b border-slate-100">
+                    <div className="flex items-center justify-between w-full">
+                        <img src="/forese.png" alt="FORESE" className="h-9 w-auto" />
+                        <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                            <X size={16} />
+                        </button>
                     </div>
-                    <span className="font-bold text-slate-900">Volunteer Hub</span>
-                    <button onClick={() => setMobileOpen(false)} className="ml-auto p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
-                        <X size={16} />
-                    </button>
+                    <div className="mt-1">
+                        <span className="inline-flex px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-blue-100/50">
+                            Volunteer Portal
+                        </span>
+                    </div>
                 </div>
                 <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
                     <SidebarLink to="/volunteer" icon={LayoutGrid} label="Dashboard" collapsed={false} />
@@ -268,6 +268,7 @@ const VolunteerDashboard = () => {
                         <Routes location={location} key={location.pathname}>
                             <Route path="/" element={<Overview />} />
                             <Route path="/enroll" element={<EnrollStudent />} />
+                            <Route path="/feedback" element={<EventFeedback />} />
                             <Route path="/notifications" element={<Notifications notifications={notifications} markAsRead={markAsRead} markAllAsRead={markAllAsRead} />} />
                         </Routes>
                     </AnimatePresence>
@@ -624,8 +625,8 @@ const EnrollStudent = () => {
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 
-const Notifications = ({ notifications, markAsRead, markAllAsRead }: { 
-    notifications: Notification[]; 
+const Notifications = ({ notifications, markAsRead, markAllAsRead }: {
+    notifications: Notification[];
     markAsRead: (id: string) => void;
     markAllAsRead: () => void;
 }) => {
@@ -637,7 +638,7 @@ const Notifications = ({ notifications, markAsRead, markAllAsRead }: {
                     <p className="text-[13px] text-slate-500">Stay updated on student transfers and platform alerts.</p>
                 </div>
                 {notifications.some(n => !n.isRead) && (
-                    <button 
+                    <button
                         onClick={markAllAsRead}
                         className="text-[12px] font-semibold text-emerald-600 hover:text-emerald-700 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-all"
                     >
@@ -693,6 +694,291 @@ const Notifications = ({ notifications, markAsRead, markAllAsRead }: {
                     </div>
                 )}
             </div>
+        </motion.div>
+    );
+};
+
+// ─── Event Feedback ───────────────────────────────────────────────────────────
+
+const FEEDBACK_TEXT_FIELDS = [
+    {
+        key: 'issuesFaced' as keyof FeedbackFormState,
+        label: 'Issues Faced During Your Shift',
+        description: 'Describe any problems or challenges you encountered.',
+        placeholder: 'e.g. Technical issues, coordination gaps, student behaviour concerns...',
+    },
+    {
+        key: 'improvementSuggestions' as keyof FeedbackFormState,
+        label: 'Suggestions for Improvement',
+        description: 'What could make this process better for future drives?',
+        placeholder: 'e.g. Better scheduling, clearer briefings, improved platform features...',
+    },
+    {
+        key: 'additionalComments' as keyof FeedbackFormState,
+        label: 'Additional Comments',
+        description: 'Any other thoughts, shoutouts, or final remarks.',
+        placeholder: 'e.g. Any final thoughts or general observations...',
+    },
+];
+
+const RATING_CRITERIA = [
+    {
+        key: 'clarityOfInstructions' as keyof FeedbackFormState,
+        label: 'Clarity of Instructions',
+        sub: 'How clearly were your responsibilities and tasks explained by HR?',
+    },
+    {
+        key: 'hrCooperation' as keyof FeedbackFormState,
+        label: 'HR Cooperation & Support',
+        sub: 'How supportive and approachable were the HR coordinators?',
+    },
+    {
+        key: 'organizationOfSchedule' as keyof FeedbackFormState,
+        label: 'Interview Schedule Organization',
+        sub: 'How well were interviews scheduled and conducted on time?',
+    },
+    {
+        key: 'softwareEase' as keyof FeedbackFormState,
+        label: 'Software & System Usability',
+        sub: 'How easy was the platform to use for managing candidates?',
+    },
+    {
+        key: 'workloadManagement' as keyof FeedbackFormState,
+        label: 'Workload Management',
+        sub: 'Was the workload assigned to you reasonable and manageable?',
+    },
+    {
+        key: 'overallExperience' as keyof FeedbackFormState,
+        label: 'Overall Experience',
+        sub: 'Your overall experience assisting with the interview process.',
+    },
+];
+
+function RatingRow({ index, label, sub, value, onChange }: {
+    index: number; label: string; sub: string; value: number; onChange: (v: number) => void;
+}) {
+    const getButtonStyle = (n: number) => {
+        if (value !== n) return 'bg-white border border-blue-100 text-blue-300 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50';
+        if (n <= 4) return 'bg-red-500 border-red-500 text-white shadow shadow-red-200';
+        if (n <= 6) return 'bg-amber-400 border-amber-400 text-white shadow shadow-amber-200';
+        if (n <= 8) return 'bg-blue-500 border-blue-500 text-white shadow shadow-blue-200';
+        return 'bg-blue-700 border-blue-700 text-white shadow shadow-blue-300';
+    };
+
+    const sentimentLabel = (v: number) => {
+        if (!v) return null;
+        if (v <= 4) return <span className="text-[10px] font-semibold text-red-400 bg-red-50 px-2 py-0.5 rounded-full">Needs Work</span>;
+        if (v <= 6) return <span className="text-[10px] font-semibold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">Fair</span>;
+        if (v <= 8) return <span className="text-[10px] font-semibold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">Good</span>;
+        return <span className="text-[10px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Excellent</span>;
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.06 }}
+            className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                value > 0 ? 'border-blue-200 bg-blue-50/40' : 'border-slate-100 bg-white'
+            }`}
+        >
+            <div className="px-5 pt-5 pb-4 flex items-start gap-3">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[12px] font-extrabold ${
+                    value > 0 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400 border border-slate-200'
+                }`}>
+                    {String(index + 1).padStart(2, '0')}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[13px] font-bold text-slate-800">{label}</span>
+                        {sentimentLabel(value)}
+                        {value > 0 && (
+                            <span className="ml-auto text-[18px] font-extrabold text-blue-600 leading-none">{value}<span className="text-[11px] text-blue-300 font-semibold">/10</span></span>
+                        )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium mt-0.5 leading-relaxed">{sub}</p>
+                </div>
+            </div>
+            <div className="px-5 pb-5">
+                <div className="flex gap-1.5 flex-wrap">
+                    {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                        <button
+                            key={n}
+                            type="button"
+                            onClick={() => onChange(n)}
+                            className={`w-9 h-9 rounded-lg text-[12px] font-bold transition-all ${getButtonStyle(n)}`}
+                        >
+                            {n}
+                        </button>
+                    ))}
+                    <span className="ml-auto self-center text-[10px] text-slate-300 font-medium">1 = Poor &nbsp;·&nbsp; 10 = Excellent</span>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
+const EventFeedback = () => {
+    const [submitting, setSubmitting] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [form, setForm] = useState<FeedbackFormState>({
+        clarityOfInstructions: 0,
+        hrCooperation: 0,
+        organizationOfSchedule: 0,
+        softwareEase: 0,
+        workloadManagement: 0,
+        overallExperience: 0,
+        issuesFaced: '',
+        improvementSuggestions: '',
+        additionalComments: '',
+    });
+
+    const ratedCount = RATING_CRITERIA.filter(c => (form[c.key] as number) > 0).length;
+    const textFilled = FEEDBACK_TEXT_FIELDS.every(f => (form[f.key] as string).trim().length > 0);
+    const isFormComplete = ratedCount === RATING_CRITERIA.length && textFilled;
+
+    const resetForm = () => setForm({
+        clarityOfInstructions: 0, hrCooperation: 0, organizationOfSchedule: 0,
+        softwareEase: 0, workloadManagement: 0, overallExperience: 0,
+        issuesFaced: '', improvementSuggestions: '', additionalComments: '',
+    });
+
+    const handleSubmit = async () => {
+        if (!isFormComplete) {
+            toast.error("Form Incomplete", { description: "Please answer all questions before submitting." });
+            return;
+        }
+        setSubmitting(true);
+        try {
+            await api.post('/volunteer/feedback', form);
+            setSubmitted(true);
+        } catch {
+            toast.error("Submission Failed", { description: "Could not submit your feedback. Please try again." });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    /* ── Success screen ── */
+    if (submitted) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col items-center justify-center min-h-[65vh] text-center px-6"
+            >
+                <div className="relative mb-7">
+                    <div className="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-300">
+                        <CheckCircle2 size={44} className="text-white" strokeWidth={1.75} />
+                    </div>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-100 rounded-full text-[11px] font-bold text-blue-500 uppercase tracking-widest mb-3">
+                    Feedback Received
+                </div>
+                <h2 className="text-[28px] font-extrabold text-slate-900 mb-2 leading-tight">Thank you for your input!</h2>
+                <p className="text-[14px] text-slate-500 max-w-xs leading-relaxed mb-8">
+                    Your feedback has been recorded and will help us improve future placement drives.
+                </p>
+                <button
+                    onClick={() => { setSubmitted(false); resetForm(); }}
+                    className="px-7 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[13px] font-bold transition-all shadow-lg shadow-blue-200 active:scale-95"
+                >
+                    Submit Another Response
+                </button>
+            </motion.div>
+        );
+    }
+
+    /* ── Main form ── */
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center w-full pb-20"
+        >
+
+            {/* ── Section 1: Ratings ── */}
+            <div className="w-full max-w-3xl mb-2 mt-4">
+                <div className="flex items-center gap-2.5 mb-4 px-1">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-[11px] font-extrabold shrink-0">1</div>
+                    <div>
+                        <h2 className="text-[14px] font-extrabold text-slate-800 leading-none">Performance Ratings</h2>
+                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">All six criteria are required. Select a score from 1–10.</p>
+                    </div>
+                </div>
+
+                <div className="space-y-2.5">
+                    {RATING_CRITERIA.map((c, i) => (
+                        <RatingRow
+                            key={c.key}
+                            index={i}
+                            label={c.label}
+                            sub={c.sub}
+                            value={form[c.key] as number}
+                            onChange={v => setForm(p => ({ ...p, [c.key]: v }))}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {/* ── Section 2: Text Feedback ── */}
+            <div className="w-full max-w-3xl mt-7">
+                <div className="flex items-center gap-2.5 mb-4 px-1">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-[11px] font-extrabold shrink-0">2</div>
+                    <div>
+                        <h2 className="text-[14px] font-extrabold text-slate-800 leading-none">Written Feedback</h2>
+                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">Please share your detailed thoughts. All fields are required.</p>
+                    </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden divide-y divide-slate-100">
+                    {FEEDBACK_TEXT_FIELDS.map((field) => (
+                        <div key={field.key} className="px-6 py-5">
+                            <div className="flex items-center gap-2 mb-1">
+                                <label className="text-[13px] font-bold text-slate-700">{field.label}</label>
+                                <span className="ml-auto text-[10px] text-blue-500 font-bold uppercase tracking-wider">Required</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 font-medium mb-3">{field.description}</p>
+                            <textarea
+                                rows={3}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] text-slate-700 font-medium resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all placeholder-slate-300 leading-relaxed"
+                                placeholder={field.placeholder}
+                                value={form[field.key] as string}
+                                onChange={e => setForm(p => ({ ...p, [field.key]: e.target.value }))}
+                            />
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* ── Submit bar ── */}
+            <div className="w-full max-w-3xl mt-8">
+                <div className={`rounded-2xl border px-8 py-5 flex items-center justify-between gap-4 transition-all ${
+                    isFormComplete
+                        ? 'bg-blue-600 border-blue-600 shadow-xl shadow-blue-200'
+                        : 'bg-white border-slate-100 shadow-sm outline outline-1 outline-slate-50'
+                }`}>
+                    <div className="flex items-center gap-3">
+                        <div className={`w-2.5 h-2.5 rounded-full ${isFormComplete ? 'bg-white animate-pulse' : 'bg-slate-200'}`} />
+                        <span className={`text-[13px] font-bold ${isFormComplete ? 'text-white' : 'text-slate-400'}`}>
+                            {isFormComplete ? 'Ready to Submit' : 'Incomplete Form'}
+                        </span>
+                    </div>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={submitting || !isFormComplete}
+                        className={`h-11 px-10 rounded-xl text-[13px] font-bold flex items-center gap-2 transition-all active:scale-95 shrink-0 ${
+                            isFormComplete
+                                ? 'bg-white text-blue-700 hover:bg-blue-50 hover:shadow-lg'
+                                : 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
+                        }`}
+                    >
+                        {submitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                        {submitting ? 'Submitting...' : 'Submit Feedback'}
+                    </button>
+                </div>
+            </div>
+
         </motion.div>
     );
 };

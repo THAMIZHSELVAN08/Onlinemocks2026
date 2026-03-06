@@ -8,9 +8,7 @@ import {
   Clock,
   LogOut,
   Loader2,
-  LayoutGrid,
   CheckCircle2,
-  MessageSquare,
   HelpCircle,
   Bell,
   MoreHorizontal,
@@ -42,6 +40,8 @@ interface StudentWithAssignment {
   order: number;
   resumeUrl?: string;
   evaluation_status: string;
+  aptitudeScore?: number;
+  gdScore?: number;
 }
 
 interface FeedbackFormState {
@@ -89,27 +89,116 @@ function Badge({ status }: { status: InterviewStatus }) {
   );
 }
 
-function RatingMatrix({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+// ── Score Cell ────────────────────────────────────────────────────────────────
+function ScoreCell({ value, type }: { value: number | undefined; type: "apt" | "gd" }) {
+  const isEmpty = value === 0 || value == null;
+
+  const config = {
+    apt: {
+      emptyText: "text-slate-300",
+      valueText: "text-blue-600",
+      bar: "bg-blue-500",
+    },
+    gd: {
+      emptyText: "text-slate-300",
+      valueText: "text-emerald-600",
+      bar: "bg-emerald-500",
+    },
+  };
+
+  const c = config[type];
+  const pct = Math.min(100, Math.max(0, ((value || 0) / 100) * 100));
+
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center justify-between py-4 gap-4 border-b border-slate-100 last:border-0">
-      <span className="text-[13px] font-medium text-slate-700 lg:w-56 shrink-0">{label}</span>
-      <div className="flex gap-1.5 flex-wrap">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onChange(n)}
-            className={`w-9 h-9 rounded-lg text-[12px] font-semibold transition-all border ${
-              value === n
-                ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20"
-                : "bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600"
-            }`}
-          >
-            {n}
-          </button>
-        ))}
+    <div className="inline-flex flex-col gap-1.5 min-w-[48px]">
+      <span className={`text-[15px] font-bold leading-none tabular-nums ${isEmpty ? c.emptyText : c.valueText}`}>
+        {isEmpty ? "—" : value}
+      </span>
+      <div className="h-[3px] rounded-full bg-slate-100 overflow-hidden w-12">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${isEmpty ? "bg-slate-200" : c.bar}`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
+  );
+}
+
+const HR_RATING_CRITERIA = [
+  { key: 'technicalKnowledge' as keyof FeedbackFormState, label: 'Student Technical Knowledge', sub: 'Assess the overall technical depth and fundamental clarity of candidates.' },
+  { key: 'serviceAndCoordination' as keyof FeedbackFormState, label: 'Service & Coordination', sub: 'Rate the support provided by volunteers and the placement team.' },
+  { key: 'communicationSkills' as keyof FeedbackFormState, label: 'Communication Quality', sub: 'Effectiveness of communication between students, volunteers, and HR.' },
+  { key: 'futureParticipation' as keyof FeedbackFormState, label: 'Future Participation Likelihood', sub: 'Would you be interested in participating in future placement drives?' },
+  { key: 'punctualityAndInterest' as keyof FeedbackFormState, label: 'Punctuality & Student Interest', sub: 'Professionalism, time-management, and enthusiasm shown by students.' },
+];
+
+const HR_TEXT_FIELDS = [
+  { key: 'suggestions' as keyof FeedbackFormState, label: 'General Suggestions', placeholder: 'Any operational or coordinating suggestions?', desc: 'Describe any overarching thoughts about the drive.' },
+  { key: 'issuesFaced' as keyof FeedbackFormState, label: 'Issues Faced', placeholder: 'Any pain points or coordination blockers?', desc: 'Technical glitches, scheduling issues, etc.' },
+  { key: 'improvementSuggestions' as keyof FeedbackFormState, label: 'Improvement Points', placeholder: 'How could future drives be better?', desc: 'Suggestions for process optimization.' },
+];
+
+function RatingRow({ index, label, sub, value, onChange }: {
+  index: number; label: string; sub: string; value: number; onChange: (v: number) => void;
+}) {
+  const getButtonStyle = (n: number) => {
+    if (value !== n) return 'bg-white border border-blue-100 text-blue-300 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50';
+    if (n <= 4) return 'bg-red-500 border-red-500 text-white shadow shadow-red-200';
+    if (n <= 6) return 'bg-amber-400 border-amber-400 text-white shadow shadow-amber-200';
+    if (n <= 8) return 'bg-blue-500 border-blue-500 text-white shadow shadow-blue-200';
+    return 'bg-blue-700 border-blue-700 text-white shadow shadow-blue-300';
+  };
+
+  const sentimentLabel = (v: number) => {
+    if (!v) return null;
+    if (v <= 4) return <span className="text-[10px] font-semibold text-red-400 bg-red-50 px-2 py-0.5 rounded-full">Needs Work</span>;
+    if (v <= 6) return <span className="text-[10px] font-semibold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full">Fair</span>;
+    if (v <= 8) return <span className="text-[10px] font-semibold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">Good</span>;
+    return <span className="text-[10px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Excellent</span>;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.06 }}
+      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+        value > 0 ? 'border-blue-200 bg-blue-50/40' : 'border-slate-100 bg-white'
+      }`}
+    >
+      <div className="px-5 pt-5 pb-4 flex items-start gap-3">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[12px] font-extrabold ${
+          value > 0 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400 border border-slate-200'
+        }`}>
+          {String(index + 1).padStart(2, '0')}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[13px] font-bold text-slate-800">{label}</span>
+            {sentimentLabel(value)}
+            {value > 0 && (
+              <span className="ml-auto text-[18px] font-extrabold text-blue-600 leading-none">{value}<span className="text-[11px] text-blue-300 font-semibold">/10</span></span>
+            )}
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium mt-0.5 leading-relaxed">{sub}</p>
+        </div>
+      </div>
+      <div className="px-5 pb-5">
+        <div className="flex gap-1.5 flex-wrap">
+          {[1,2,3,4,5,6,7,8,9,10].map(n => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(n)}
+              className={`w-9 h-9 rounded-lg text-[12px] font-bold transition-all ${getButtonStyle(n)}`}
+            >
+              {n}
+            </button>
+          ))}
+          <span className="ml-auto self-center text-[10px] text-slate-300 font-medium">1 = Poor &nbsp;·&nbsp; 10 = Excellent</span>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -268,11 +357,11 @@ export default function HRDashboard() {
     { name: "Total", value: stats.total, color: "#dbeafe" },
   ];
 
-  const tabLabel = 
-    activeTab === "overview" ? "Dashboard" : 
-    activeTab === "students" ? "Student Directory" : 
+  const tabLabel =
+    activeTab === "overview" ? "Dashboard" :
+    activeTab === "students" ? "Student Directory" :
     activeTab === "notifications" ? "Notifications" :
-    "Event Feedback";
+    " Feedback";
 
   return (
     <div className="bg-slate-100 font-sans text-slate-900 md:p-2 flex gap-0" style={{ height: "100vh" }}>
@@ -288,47 +377,31 @@ export default function HRDashboard() {
 
       {/* Desktop Sidebar */}
       <aside className={`hidden md:flex flex-col bg-slate-100 transition-all duration-300 overflow-hidden shrink-0 ${sidebarOpen ? "md:w-56" : "md:w-0"}`}>
-        <div className="h-16 px-5 flex items-center gap-3 border-b border-slate-200/60">
-          <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/25 shrink-0">
-            <LayoutGrid className="text-white" size={18} strokeWidth={2.5} />
-          </div>
+        <div className="h-28 px-6 flex flex-col justify-center border-b border-slate-200/60">
+          <img src="/forese.png" alt="FORESE" className="h-16 w-auto self-start" />
           {sidebarOpen && (
-            <div>
-              <div className="text-[15px] font-black tracking-tight text-slate-900 uppercase leading-none">FORESE</div>
-              <div className="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mt-0.5">HR Portal</div>
+            <div className="mt-2 text-left">
+              <span className="inline-flex px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-blue-100/50">
+                HR Portal
+              </span>
             </div>
           )}
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           <SidebarLink active={activeTab === "overview"} collapsed={!sidebarOpen} onClick={() => setActiveTab("overview")} icon={LayoutDashboard} label="Dashboard" />
-          
+
           {sidebarOpen && <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 pt-5 pb-1.5">Management</p>}
           {!sidebarOpen && <div className="my-3 border-t border-slate-200" />}
 
           <SidebarLink active={activeTab === "students"} collapsed={!sidebarOpen} onClick={() => setActiveTab("students")} icon={Users} label="Students" />
-          <SidebarLink active={activeTab === "feedback"} collapsed={!sidebarOpen} onClick={() => setActiveTab("feedback")} icon={Star} label="Event Feedback" />
+          <SidebarLink active={activeTab === "feedback"} collapsed={!sidebarOpen} onClick={() => setActiveTab("feedback")} icon={Star} label="Feedback" />
           <SidebarLink active={activeTab === "notifications"} collapsed={!sidebarOpen} onClick={() => setActiveTab("notifications")} icon={Bell} label="Notifications" />
 
           {sidebarOpen && <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 pt-5 pb-1.5">Support</p>}
           {!sidebarOpen && <div className="my-3 border-t border-slate-200" />}
           <SidebarLink active={false} collapsed={!sidebarOpen} onClick={() => {}} icon={HelpCircle} label="Help & Docs" />
         </nav>
-
-        {sidebarOpen && (
-          <div className="px-4 pb-4">
-            <div className="bg-white rounded-2xl p-5 border border-slate-200">
-              <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center mb-3">
-                <HelpCircle size={16} className="text-blue-600" />
-              </div>
-              <p className="text-[12px] font-semibold text-slate-800 mb-0.5">Need help?</p>
-              <p className="text-[11px] text-slate-400 leading-relaxed mb-3">Contact our support team.</p>
-              <button className="w-full py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-600 hover:bg-white transition-all">
-                Contact Support
-              </button>
-            </div>
-          </div>
-        )}
 
         <div className="px-3 pb-5">
           <button onClick={logout}
@@ -341,14 +414,18 @@ export default function HRDashboard() {
 
       {/* Mobile Drawer */}
       <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-white border-r border-slate-100 md:hidden transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-100">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
-            <LayoutGrid className="text-white" size={16} />
+        <div className="flex flex-col gap-3 px-6 py-6 border-b border-slate-100">
+          <div className="flex items-center justify-between w-full">
+            <img src="/forese.png" alt="FORESE" className="h-9 w-auto" />
+            <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+              <X size={16} />
+            </button>
           </div>
-          <span className="font-bold text-slate-900">HR Portal</span>
-          <button onClick={() => setMobileOpen(false)} className="ml-auto p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
-            <X size={16} />
-          </button>
+          <div className="mt-1">
+            <span className="inline-flex px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-blue-100/50">
+              HR Portal
+            </span>
+          </div>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           <SidebarLink active={activeTab === "overview"} collapsed={false} onClick={() => { setActiveTab("overview"); setMobileOpen(false); }} icon={LayoutDashboard} label="Dashboard" />
@@ -595,25 +672,44 @@ export default function HRDashboard() {
                       )}
                     </AnimatePresence>
 
-                    {/* ── UPDATED TABLE: # | Student | Department | Resume | Interview | Actions ── */}
+                    {/* Table */}
                     <div className="overflow-x-auto">
-                      <table className="w-full table-fixed">
+                      <table className="w-full table-fixed" style={{ minWidth: "900px" }}>
                         <colgroup>
                           <col style={{ width: "52px" }} />
-                          <col style={{ width: "22%" }} />
-                          <col />
-                          <col style={{ width: "100px" }} />
+                          <col style={{ width: "20%" }} />
+                          <col style={{ width: "26%" }} />
+                          <col style={{ width: "110px" }} />
+                          <col style={{ width: "110px" }} />
+                          <col style={{ width: "90px" }} />
                           <col style={{ width: "140px" }} />
                           <col style={{ width: "150px" }} />
                         </colgroup>
                         <thead>
                           <tr className="bg-slate-50 border-b border-slate-100">
-                            <th className="px-6 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">#</th>
-                            <th className="px-3 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Student</th>
-                            <th className="px-3 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Department</th>
-                            <th className="px-3 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Resume</th>
-                            <th className="px-3 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Interview</th>
-                            <th className="px-6 py-3.5 text-right text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Actions</th>
+                            <th className="px-6 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">#</th>
+                            <th className="px-3 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Student</th>
+                            <th className="px-3 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Department</th>
+
+                            {/* Aptitude header */}
+                            <th className="px-3 py-3.5 text-left whitespace-nowrap">
+                              <div className="inline-flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Aptitude</span>
+                              </div>
+                            </th>
+
+                            {/* GD Score header */}
+                            <th className="px-3 py-3.5 text-left whitespace-nowrap">
+                              <div className="inline-flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">GD Score</span>
+                              </div>
+                            </th>
+
+                            <th className="px-3 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Resume</th>
+                            <th className="px-3 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Interview</th>
+                            <th className="px-6 py-3.5 text-right text-[11px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -625,7 +721,18 @@ export default function HRDashboard() {
                                 <div className="text-[11px] text-slate-400 mt-0.5">{s.register_number}</div>
                               </td>
                               <td className="px-3 py-4 text-[12px] text-slate-500 truncate">{s.department || "General"}</td>
-                              {/* Resume column */}
+
+                              {/* Aptitude score */}
+                              <td className="px-3 py-4">
+                                <ScoreCell value={s.aptitudeScore} type="apt" />
+                              </td>
+
+                              {/* GD score */}
+                              <td className="px-3 py-4">
+                                <ScoreCell value={s.gdScore} type="gd" />
+                              </td>
+
+                              {/* Resume */}
                               <td className="px-3 py-4">
                                 {s.resumeUrl ? (
                                   <a
@@ -641,19 +748,23 @@ export default function HRDashboard() {
                                   <span className="text-[12px] text-slate-300 font-medium">—</span>
                                 )}
                               </td>
-                              {/* Interview status badge */}
+
+                              {/* Interview status */}
                               <td className="px-3 py-4"><Badge status={s.status} /></td>
+
                               {/* Actions */}
                               <td className="px-6 py-4">
                                 <div className="flex items-center justify-end gap-2">
-                                  {s.status !== "COMPLETED" && (
-                                    <button
-                                      onClick={() => navigate(`/hr/evaluate/${s.id}`)}
-                                      className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-[12px] font-semibold hover:bg-blue-700 transition-all shadow-sm"
-                                    >
-                                      Evaluate
-                                    </button>
-                                  )}
+                                  <button
+                                    onClick={() => navigate(`/hr/evaluate/${s.id}`)}
+                                    className={`px-4 py-1.5 rounded-lg text-[12px] font-semibold transition-all shadow-sm ${
+                                      s.status === "COMPLETED"
+                                        ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                        : "bg-blue-600 text-white hover:bg-blue-700"
+                                    }`}
+                                  >
+                                    {s.status === "COMPLETED" ? "Edit" : "Evaluate"}
+                                  </button>
                                   <button
                                     onClick={() => handleNoShow(s.assignmentId)}
                                     title="Mark No-Show"
@@ -667,7 +778,7 @@ export default function HRDashboard() {
                           ))}
                           {filteredStudents.length === 0 && (
                             <tr>
-                              <td colSpan={6} className="px-6 py-16 text-center text-[13px] text-slate-400">No students match your filters.</td>
+                              <td colSpan={8} className="px-6 py-16 text-center text-[13px] text-slate-400">No students match your filters.</td>
                             </tr>
                           )}
                         </tbody>
@@ -686,7 +797,7 @@ export default function HRDashboard() {
                       <p className="text-[13px] text-slate-500">Stay updated on student transfers and platform alerts.</p>
                     </div>
                     {notifications.some(n => !n.isRead) && (
-                      <button 
+                      <button
                         onClick={markAllAsRead}
                         className="text-[12px] font-semibold text-blue-600 hover:text-blue-700 px-4 py-2 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all"
                       >
@@ -746,59 +857,98 @@ export default function HRDashboard() {
               )}
 
               {/* ── Feedback Tab ── */}
-              {activeTab === "feedback" && (
-                <motion.div key="feedback" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl space-y-6">
-                  <div>
-                    <h1 className="text-2xl font-bold text-slate-900 leading-none mb-1">Event Feedback</h1>
-                    <p className="text-[13px] text-slate-500">Share your experience from this mock placement drive.</p>
-                  </div>
+              {activeTab === "feedback" && (() => {
+                const ratedCount = HR_RATING_CRITERIA.filter(c => (feedbackForm[c.key] as number) > 0).length;
+                const textFilled = HR_TEXT_FIELDS.every(f => (feedbackForm[f.key] as string).trim().length > 0);
+                const isFormComplete = ratedCount === HR_RATING_CRITERIA.length && textFilled;
 
-                  <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-100 overflow-hidden">
-                    <div className="px-8 py-6">
-                      <h3 className="text-[13px] font-semibold text-slate-700 mb-5">Performance Ratings</h3>
-                      <div>
-                        <RatingMatrix label="Student Technical Knowledge" value={feedbackForm.technicalKnowledge} onChange={v => setFeedbackForm(p => ({ ...p, technicalKnowledge: v }))} />
-                        <RatingMatrix label="Service & Coordination" value={feedbackForm.serviceAndCoordination} onChange={v => setFeedbackForm(p => ({ ...p, serviceAndCoordination: v }))} />
-                        <RatingMatrix label="Communication Quality" value={feedbackForm.communicationSkills} onChange={v => setFeedbackForm(p => ({ ...p, communicationSkills: v }))} />
-                        <RatingMatrix label="Future Participation Likelihood" value={feedbackForm.futureParticipation} onChange={v => setFeedbackForm(p => ({ ...p, futureParticipation: v }))} />
-                        <RatingMatrix label="Punctuality & Student Interest" value={feedbackForm.punctualityAndInterest} onChange={v => setFeedbackForm(p => ({ ...p, punctualityAndInterest: v }))} />
+                return (
+                  <motion.div key="feedback" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full flex flex-col items-center">
+
+                    <div className="w-full max-w-3xl mb-4 px-1">
+                      <h1 className="text-2xl font-bold text-slate-900 leading-none mb-1">Feedback</h1>
+                      <p className="text-[13px] text-slate-500">Your experience helps us optimize future drive coordination.</p>
+                    </div>
+
+                    <div className="w-full max-w-3xl mb-8">
+                      <div className="flex items-center gap-2.5 mb-4 px-1">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-[11px] font-extrabold shrink-0">1</div>
+                        <div>
+                          <h2 className="text-[14px] font-extrabold text-slate-800 leading-none">Performance Ratings</h2>
+                          <p className="text-[11px] text-slate-400 font-medium mt-0.5">Rate each parameter based on your overall experience.</p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        {HR_RATING_CRITERIA.map((c, i) => (
+                          <RatingRow
+                            key={c.key}
+                            index={i}
+                            label={c.label}
+                            sub={c.sub}
+                            value={feedbackForm[c.key] as number}
+                            onChange={v => setFeedbackForm(p => ({ ...p, [c.key]: v }))}
+                          />
+                        ))}
                       </div>
                     </div>
 
-                    <div className="px-8 py-6">
-                      <h3 className="text-[13px] font-semibold text-slate-700 mb-5">Written Feedback</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="w-full max-w-3xl mb-8">
+                      <div className="flex items-center gap-2.5 mb-4 px-1">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-[11px] font-extrabold shrink-0">2</div>
                         <div>
-                          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Suggestions</label>
-                          <textarea value={feedbackForm.suggestions} onChange={e => setFeedbackForm(p => ({ ...p, suggestions: e.target.value }))}
-                            className="w-full h-32 bg-slate-50 border border-slate-200 rounded-xl p-4 text-[13px] text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all placeholder-slate-400"
-                            placeholder="Any operational suggestions..." />
+                          <h2 className="text-[14px] font-extrabold text-slate-800 leading-none">Experience Details</h2>
+                          <p className="text-[11px] text-slate-400 font-medium mt-0.5">Please share additional details. All fields are required.</p>
                         </div>
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Issues Faced</label>
-                          <textarea value={feedbackForm.issuesFaced} onChange={e => setFeedbackForm(p => ({ ...p, issuesFaced: e.target.value }))}
-                            className="w-full h-32 bg-slate-50 border border-slate-200 rounded-xl p-4 text-[13px] text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all placeholder-slate-400"
-                            placeholder="Any pain points or blockers..." />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Improvement Suggestions</label>
-                          <textarea value={feedbackForm.improvementSuggestions} onChange={e => setFeedbackForm(p => ({ ...p, improvementSuggestions: e.target.value }))}
-                            className="w-full h-32 bg-slate-50 border border-slate-200 rounded-xl p-4 text-[13px] text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all placeholder-slate-400"
-                            placeholder="How could future drives be improved..." />
-                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden divide-y divide-slate-100">
+                        {HR_TEXT_FIELDS.map((field) => (
+                          <div key={field.key} className="px-6 py-5">
+                            <div className="flex items-center gap-2 mb-1">
+                              <label className="text-[13px] font-bold text-slate-700">{field.label}</label>
+                              <span className="ml-auto text-[10px] text-blue-500 font-bold uppercase tracking-wider">Required</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 font-medium mb-3">{field.desc}</p>
+                            <textarea
+                              rows={3}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] text-slate-700 font-medium resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all placeholder-slate-300 leading-relaxed"
+                              placeholder={field.placeholder}
+                              value={feedbackForm[field.key] as string}
+                              onChange={e => setFeedbackForm(p => ({ ...p, [field.key]: e.target.value }))}
+                            />
+                          </div>
+                        ))}
                       </div>
                     </div>
 
-                    <div className="px-8 py-5 bg-slate-50 flex justify-end">
-                      <button onClick={submitFeedback} disabled={submittingFeedback}
-                        className="flex items-center gap-2 px-8 py-2.5 bg-blue-600 text-white rounded-xl text-[13px] font-semibold hover:bg-blue-700 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                        {submittingFeedback ? <Loader2 size={16} className="animate-spin" /> : <MessageSquare size={16} />}
-                        Submit Feedback
-                      </button>
+                    <div className="w-full max-w-3xl mb-20">
+                      <div className={`rounded-2xl border px-8 py-5 flex items-center justify-between gap-4 transition-all ${
+                        isFormComplete
+                          ? 'bg-blue-600 border-blue-600 shadow-xl shadow-blue-200'
+                          : 'bg-white border-slate-100 shadow-sm outline outline-1 outline-slate-50'
+                      }`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2.5 h-2.5 rounded-full ${isFormComplete ? 'bg-white animate-pulse' : 'bg-slate-200'}`} />
+                          <span className={`text-[13px] font-bold ${isFormComplete ? 'text-white' : 'text-slate-400'}`}>
+                            {isFormComplete ? 'Ready to Submit' : 'Incomplete Form'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={submitFeedback}
+                          disabled={submittingFeedback || !isFormComplete}
+                          className={`h-11 px-10 rounded-xl text-[13px] font-bold flex items-center gap-2 transition-all active:scale-95 shrink-0 ${
+                            isFormComplete
+                              ? 'bg-white text-blue-700 hover:bg-blue-50 hover:shadow-lg'
+                              : 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
+                          }`}
+                        >
+                          {submittingFeedback ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                          {submittingFeedback ? 'Submitting...' : 'Submit Feedback'}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              )}
+                  </motion.div>
+                );
+              })()}
 
             </AnimatePresence>
           )}

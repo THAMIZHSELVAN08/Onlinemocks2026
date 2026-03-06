@@ -18,6 +18,8 @@ import {
   StudentSearchQuerySchema,
   HrIdParamSchema,
   CsvStudentRowSchema,
+  CsvHrRowSchema,
+  CsvVolunteerRowSchema,
 } from "../schemas";
 import type { FeedbackHrParam } from "../schemas";
 import prisma from "../lib/prisma";
@@ -573,10 +575,15 @@ router.post(
   checkRole(["ADMIN"]),
   uploadCsv.single("file"),
   async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
     const rawRows: unknown[] = [];
 
     fs.createReadStream(req.file!.path)
-      .pipe(csv())
+      .pipe(csv({
+        mapHeaders: ({ header }) => header.trim().toLowerCase(),
+        mapValues: ({ value }) => value.trim(),
+      }))
       .on("data", (data) => rawRows.push(data))
       .on("end", async () => {
         // Validate each CSV row
@@ -586,42 +593,82 @@ router.post(
         });
 
         if (validRows.length === 0) {
-          fs.unlinkSync(req.file!.path);
-          return res
-            .status(400)
-            .json({ message: "No valid rows found in CSV" });
+          if (fs.existsSync(req.file!.path)) fs.unlinkSync(req.file!.path);
+          return res.status(400).json({ message: "No valid rows found in CSV" });
         }
 
         try {
+          // Prefetch HRs for allocation
+          const hrs = await prisma.hrProfile.findMany({ select: { id: true, name: true } });
+          const hrMap = new Map(hrs.filter(h => !!h.name).map(h => [h.name!.toLowerCase().trim(), h.id]));
+
+          let createdCount = 0;
+          let assignedCount = 0;
+
           await prisma.$transaction(async (tx) => {
             for (const row of validRows) {
               const regNum = row.register_number!;
 
-              await tx.student.upsert({
+              const student = await tx.student.upsert({
                 where: { registerNumber: regNum },
-                  create: {
-                    name: row.name,
-                    registerNumber: regNum,
-                    department: row.department,
-                    section: row.section,
-                    resumeUrl: row.resume,
-                  },
-                  update: {
-                    name: row.name,
-                    department: row.department,
-                    section: row.section,
-                    resumeUrl: row.resume,
-                  },
+                create: {
+                  name: row.name,
+                  registerNumber: regNum,
+                  department: row.department || null,
+                  section: row.section || null,
+                  resumeUrl: row.resume || null,
+                },
+                update: {
+                  name: row.name,
+                  department: row.department || null,
+                  section: row.section || null,
+                  resumeUrl: row.resume || null,
+                },
               });
+
+              createdCount++;
+
+              if (row.allocated_hr) {
+                const hrNameRaw = row.allocated_hr.toLowerCase().trim();
+                const hrId = hrMap.get(hrNameRaw);
+
+                if (hrId) {
+                  // Check if already assigned to THIS HR
+                  const existingAssignment = await tx.hrAssignment.findFirst({
+                    where: { studentId: student.id, hrId }
+                  });
+
+                  if (!existingAssignment) {
+                    // Find highest order for this HR
+                    const lastAssignment = await tx.hrAssignment.findFirst({
+                      where: { hrId },
+                      orderBy: { order: 'desc' }
+                    });
+                    const nextOrder = (lastAssignment?.order ?? 0) + 1;
+
+                    await tx.hrAssignment.create({
+                      data: {
+                        hrId,
+                        studentId: student.id,
+                        order: nextOrder,
+                        status: 'PENDING'
+                      }
+                    });
+                    assignedCount++;
+                  }
+                }
+              }
             }
           });
-          fs.unlinkSync(req.file!.path);
+
+          if (fs.existsSync(req.file!.path)) fs.unlinkSync(req.file!.path);
           res.json({
-            message: `${validRows.length} students registered successfully`,
+            message: `${createdCount} students processed.${assignedCount > 0 ? ` ${assignedCount} HR assignments created.` : ''}`,
           });
         } catch (err) {
           console.error(err);
-          res.status(500).send("Server Error");
+          if (fs.existsSync(req.file!.path)) fs.unlinkSync(req.file!.path);
+          res.status(500).send("Server Error during bulk import");
         }
       });
   },
@@ -668,6 +715,85 @@ router.post(
   },
 );
 
+// ── POST /hr/bulk (CSV) ───────────────────────────────────────────────────────
+
+router.post(
+  "/hr/bulk",
+  auth,
+  checkRole(["ADMIN"]),
+  uploadCsv.single("file"),
+  async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    
+    const rawRows: any[] = [];
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on("data", (data) => rawRows.push(data))
+      .on("end", async () => {
+        const validRows = rawRows.flatMap((row) => {
+          const parsed = CsvHrRowSchema.safeParse(row);
+          return parsed.success ? [parsed.data] : [];
+        });
+
+        if (validRows.length === 0) {
+          fs.unlinkSync(req.file!.path);
+          return res.status(400).json({ message: "No valid rows found in CSV (Template: name, company)" });
+        }
+
+        try {
+          let createdCount = 0;
+          let skippedCount = 0;
+
+          for (const row of validRows) {
+            const fullName = row.name.trim();
+            const company = row.company.trim();
+            
+            // Generate username: name_randomNumbers
+            // Generate username: name_randomNumbers (removing spaces)
+            const baseUsername = fullName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 15);
+            const randomSuffix = Math.floor(1000 + Math.random() * 9000); // 4 digit random
+            const username = `${baseUsername}${randomSuffix}`;
+            const password = `${baseUsername}@${randomSuffix}`; // Simple generated password
+
+            const existing = await prisma.user.findUnique({ where: { username } });
+            if (existing) {
+              skippedCount++;
+              continue;
+            }
+
+            const salt = await bcrypt.genSalt(10);
+            const passwordHash = await bcrypt.hash(password, salt);
+
+            await prisma.$transaction(async (tx) => {
+              const user = await tx.user.create({
+                data: { username, passwordHash, role: "HR", plainPassword: password },
+              });
+
+              await tx.hrProfile.create({
+                data: {
+                  id: user.id,
+                  name: fullName,
+                  companyName: company,
+                },
+              });
+            });
+            createdCount++;
+          }
+
+          fs.unlinkSync(req.file!.path);
+          res.json({
+            message: `${createdCount} HR accounts created successfully.${skippedCount > 0 ? ` ${skippedCount} skipped.` : ''}`,
+            created: createdCount
+          });
+        } catch (err) {
+          console.error(err);
+          if (fs.existsSync(req.file!.path)) fs.unlinkSync(req.file!.path);
+          res.status(500).send("Server Error during bulk creation");
+        }
+      });
+  },
+);
+
 // ── POST /register/volunteer ─────────────────────────────────────────────────
 
 router.post(
@@ -705,6 +831,98 @@ router.post(
       console.error(err);
       res.status(500).send("Server Error");
     }
+  },
+);
+
+// ── POST /volunteers/bulk (CSV) ───────────────────────────────────────────────
+
+router.post(
+  "/volunteers/bulk",
+  auth,
+  checkRole(["ADMIN"]),
+  uploadCsv.single("file"),
+  async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+    const rawRows: any[] = [];
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on("data", (data) => rawRows.push(data))
+      .on("end", async () => {
+        const validRows = rawRows.flatMap((row) => {
+          const parsed = CsvVolunteerRowSchema.safeParse(row);
+          return parsed.success ? [parsed.data] : [];
+        });
+
+        if (validRows.length === 0) {
+          fs.unlinkSync(req.file!.path);
+          return res.status(400).json({ message: "No valid rows found or incorrect format (name, hr_name)" });
+        }
+
+        try {
+          // Prefetch HRs to map names to IDs
+          const hrs = await prisma.hrProfile.findMany({ select: { id: true, name: true } });
+          const hrMap = new Map(hrs.filter(h => !!h.name).map(h => [h.name!.toLowerCase().trim(), h.id]));
+
+          let createdCount = 0;
+          let skippedCount = 0;
+          let hrNotFoundCount = 0;
+
+          for (const row of validRows) {
+            const fullName = row.name.trim();
+            const hrName = row.hr_name.toLowerCase().trim();
+            
+            const hrId = hrMap.get(hrName);
+            if (!hrId) {
+              hrNotFoundCount++;
+              continue;
+            }
+
+            // Generate username: name_randomNumbers (removing spaces)
+            const baseUsername = fullName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 15);
+            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+            const username = `${baseUsername}${randomSuffix}`;
+            const password = `${baseUsername}@${randomSuffix}`;
+
+            const existing = await prisma.user.findUnique({ where: { username } });
+            if (existing) {
+              skippedCount++;
+              continue;
+            }
+
+            const salt = await bcrypt.genSalt(10);
+            const passwordHash = await bcrypt.hash(password, salt);
+
+            await prisma.$transaction(async (tx) => {
+              const user = await tx.user.create({
+                data: { username, passwordHash, role: "VOLUNTEER", plainPassword: password },
+              });
+
+              await tx.volunteerProfile.create({
+                data: {
+                  id: user.id,
+                  name: fullName,
+                  assignedHrId: hrId,
+                },
+              });
+            });
+            createdCount++;
+          }
+
+          if (fs.existsSync(req.file!.path)) fs.unlinkSync(req.file!.path);
+          
+          res.json({
+            message: `${createdCount} volunteers created.${hrNotFoundCount > 0 ? ` ${hrNotFoundCount} HRs not found.` : ''}${skippedCount > 0 ? ` ${skippedCount} usernames taken.` : ''}`,
+            created: createdCount,
+            skipped: skippedCount,
+            hrNotFound: hrNotFoundCount
+          });
+        } catch (err) {
+          console.error(err);
+          if (fs.existsSync(req.file!.path)) fs.unlinkSync(req.file!.path);
+          res.status(500).send("Server Error during bulk creation");
+        }
+      });
   },
 );
 

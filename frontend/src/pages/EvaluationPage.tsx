@@ -17,6 +17,9 @@ interface Student {
     hr_name?: string;
     resume_url?: string;
     overallScore?: number;
+    evaluation?: any;
+    aptitudeScore?: number;
+    gdScore?: number;
 }
 
 const EvaluationPage = () => {
@@ -48,6 +51,24 @@ const EvaluationPage = () => {
             try {
                 const res = await api.get(`/hr/student/${studentId}`);
                 setStudent(res.data);
+                if (res.data.evaluation) {
+                    const e = res.data.evaluation;
+                    setEvaluation({
+                        criteria: {
+                            appearanceAttitude: e.appearanceAttitude || 0,
+                            managerialAptitude: e.managerialAptitude || 0,
+                            generalAwareness: e.generalAwareness || 0,
+                            technicalKnowledge: e.technicalKnowledge || 0,
+                            communicationSkills: e.communicationSkills || 0,
+                            ambition: e.ambition || 0,
+                            selfConfidence: e.selfConfidence || 0,
+                        },
+                        strengths: e.strengths || '',
+                        improvements: e.improvements || '',
+                        comments: e.comments || '',
+                        overallScore: e.overallScore || 0,
+                    });
+                }
             } catch {
                 navigate('/hr/dashboard');
             } finally {
@@ -156,6 +177,17 @@ const EvaluationPage = () => {
                                             </>
                                         )}
                                     </div>
+                                    <div className="flex items-center gap-4 mt-3">
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Aptitude Score</span>
+                                            <span className="text-[14px] font-bold text-blue-600">{student?.aptitudeScore ?? 0}</span>
+                                        </div>
+                                        <div className="w-px h-5 bg-slate-200" />
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">GD Score</span>
+                                            <span className="text-[14px] font-bold text-amber-600">{student?.gdScore ?? 0}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -262,7 +294,7 @@ const EvaluationPage = () => {
                             className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[13px] font-semibold transition-all shadow-sm active:scale-95"
                         >
                             <Save size={16} />
-                            Submit Evaluation
+                            {student?.evaluation ? 'Update Evaluation' : 'Submit Evaluation'}
                         </button>
                     </div>
                 </form>

@@ -230,6 +230,7 @@ export const CsvStudentRowSchema = z
     department: z.string().max(100).optional(),
     section: z.string().max(10).optional(),
     resume: z.string().max(1000).optional(),
+    allocated_hr: z.string().max(255).optional(),
   })
   .transform((row) => ({
     ...row,
@@ -239,6 +240,26 @@ export const CsvStudentRowSchema = z
     message: "register_number or username is required",
     path: ["register_number"],
   });
+
+// ─────────────────────────────────────────────
+// ADMIN — Bulk CSV HR Row
+// ─────────────────────────────────────────────
+
+export const CsvHrRowSchema = z.object({
+  name: z.string().min(1, "HR name is required"),
+  company: z.string().min(1, "Company name is required"),
+});
+export type CsvHrRow = z.infer<typeof CsvHrRowSchema>;
+
+// ─────────────────────────────────────────────
+// ADMIN — Bulk CSV Volunteer Row
+// ─────────────────────────────────────────────
+
+export const CsvVolunteerRowSchema = z.object({
+  name: z.string().min(1, "Volunteer name is required"),
+  hr_name: z.string().min(1, "Assigned HR name is required"),
+});
+export type CsvVolunteerRow = z.infer<typeof CsvVolunteerRowSchema>;
 
 export const AuthResponseSchema = z.object({
   token: z.string(),
@@ -305,6 +326,8 @@ registry.register("StudentTransfer", StudentTransferSchema);
 registry.register("StudentSearchQuery", StudentSearchQuerySchema);
 registry.register("HrIdParam", HrIdParamSchema);
 registry.register("CsvStudentRow", CsvStudentRowSchema);
+registry.register("CsvHrRow", CsvHrRowSchema);
+registry.register("CsvVolunteerRow", CsvVolunteerRowSchema);
 
 // HR
 registry.register("EvaluationCriteria", EvaluationCriteriaSchema);

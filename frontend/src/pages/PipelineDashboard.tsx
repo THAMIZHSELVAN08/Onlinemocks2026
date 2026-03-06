@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
-    User, Send, Search, UserPlus, HelpCircle, LayoutGrid,
+    User, Send, Search, UserPlus,
     LogOut, Clock, Bell, CheckCircle2, Filter, X, ChevronDown, Menu, PanelLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -165,14 +165,13 @@ const PipelineDashboard = () => {
 
             {/* Desktop Sidebar */}
             <aside className={`hidden md:flex flex-col bg-slate-100 transition-all duration-300 overflow-hidden shrink-0 ${sidebarOpen ? 'md:w-56' : 'md:w-0'}`}>
-                <div className="h-16 px-5 flex items-center gap-3 border-b border-slate-200/60">
-                    <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/25 shrink-0">
-                        <LayoutGrid className="text-white" size={18} strokeWidth={2.5} />
-                    </div>
+                <div className="h-28 px-6 flex flex-col justify-center border-b border-slate-200/60">
+                    <img src="/forese.png" alt="FORESE" className="h-16 w-auto self-start" />
                     {sidebarOpen && (
-                        <div>
-                            <div className="text-[15px] font-black tracking-tight text-slate-900 uppercase leading-none">FORESE</div>
-                            <div className="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mt-0.5">Pipeline Portal</div>
+                        <div className="mt-2 text-left">
+                            <span className="inline-flex px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-blue-100/50">
+                                Pipeline Portal
+                            </span>
                         </div>
                     )}
                 </div>
@@ -187,18 +186,7 @@ const PipelineDashboard = () => {
                     ))}
                 </nav>
 
-                {sidebarOpen && (
-                    <div className="px-4 pb-4">
-                        <div className="bg-white rounded-2xl p-5 border border-slate-200">
-                            <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center mb-3">
-                                <HelpCircle size={16} className="text-blue-600" />
-                            </div>
-                            <p className="text-[12px] font-semibold text-slate-800 mb-0.5">Need help?</p>
-                            <p className="text-[11px] text-slate-400 leading-relaxed mb-3">Contact our support team.</p>
-                            <button className="w-full py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-600 hover:bg-white transition-all">Contact Support</button>
-                        </div>
-                    </div>
-                )}
+
 
                 <div className="px-3 pb-5">
                     <button onClick={logout}
@@ -211,10 +199,18 @@ const PipelineDashboard = () => {
 
             {/* Mobile Drawer */}
             <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-white border-r border-slate-100 md:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-100">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0"><LayoutGrid className="text-white" size={16} /></div>
-                    <span className="font-bold text-slate-900">Pipeline Portal</span>
-                    <button onClick={() => setMobileOpen(false)} className="ml-auto p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"><X size={16} /></button>
+                <div className="flex flex-col gap-3 px-6 py-6 border-b border-slate-100">
+                    <div className="flex items-center justify-between w-full">
+                        <img src="/forese.png" alt="FORESE" className="h-9 w-auto" />
+                        <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                            <X size={16} />
+                        </button>
+                    </div>
+                    <div className="mt-1">
+                        <span className="inline-flex px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-blue-100/50">
+                            Pipeline Portal
+                        </span>
+                    </div>
                 </div>
                 <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
                     {navLinks.map(({ group, links }) => (
@@ -568,6 +564,11 @@ const SendNotifications = () => {
     const [sentCount, setSentCount] = useState<number | null>(null);
 
     const presets = [
+        { label: 'Forese Greeting', title: 'Greeting', msg: 'Greeting from Forese Tech team' },
+        { label: 'Documentation', title: 'Get Started', msg: 'To get started Please refer to the documentation attached' },
+        { label: 'Welcome Sir', title: 'Welcome Back', msg: 'Welcome back Sir' },
+        { label: 'Welcome Mam', title: 'Welcome Back', msg: 'Welcome back mam' },
+        { label: 'Thank You', title: 'MockPlacements 2026', msg: 'Thank you for attending MockPlacements 2026' },
         { label: 'Session Starting', title: 'Session Alert', msg: 'The evaluation session is about to begin. Please be ready at your desk.' },
         { label: 'Break Time', title: 'Break Notification', msg: 'A short break has been scheduled. You may pause your evaluations.' },
         { label: 'Session Ending', title: 'Session Wrap-up', msg: 'The evaluation session is ending soon. Please complete your current evaluations.' },
