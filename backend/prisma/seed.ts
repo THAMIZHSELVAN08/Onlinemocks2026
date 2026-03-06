@@ -1,7 +1,6 @@
 import { PrismaClient, Role, InterviewStatus, Student } from "@prisma/client";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
+import prisma from "../src/lib/prisma";
 
 async function main() {
   console.log("Cleaning database...");
@@ -129,23 +128,24 @@ async function main() {
   const depts = ["CSE", "ECE", "EEE", "MECH", "IT", "BIO-TECH"];
   const sections = ["A", "B", "C"];
 
-  const students = await Promise.all(
-    Array.from({ length: 50 }, async (_, i) => {
-      const regNum = `2127230601${String(100 + i + 1)}`;
+  const students: Student[] = [];
 
-      return prisma.student.create({
-        data: {
-          name: `Student ${i + 1}`,
-          registerNumber: regNum,
-          department: depts[Math.floor(Math.random() * depts.length)],
-          section: sections[Math.floor(Math.random() * sections.length)],
-          aptitudeScore: Math.floor(Math.random() * 50) + 40,
-          gdScore: Math.floor(Math.random() * 50) + 40,
-        },
-      });
-    }),
-  );
-  /*
+  for (let i = 1; i <= 50; i++) {
+    const regNum = `2127230601${String(100 + i)}`;
+
+    const student = await prisma.student.create({
+      data: {
+        name: `Student ${i}`,
+        registerNumber: regNum,
+        department: depts[Math.floor(Math.random() * depts.length)],
+        section: sections[Math.floor(Math.random() * sections.length)],
+        aptitudeScore: Math.floor(Math.random() * 50) + 40,
+        gdScore: Math.floor(Math.random() * 50) + 40,
+      },
+    });
+
+    students.push(student);
+  } /*
   =========================
   HR ASSIGNMENTS
   =========================
