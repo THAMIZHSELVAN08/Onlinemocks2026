@@ -83,11 +83,9 @@ async function main() {
   console.log("Dept rows:", deptAlloc.length);
   console.log("Volunteer rows:", volunteerAlloc.length);
 
-
   const hrMap = new Map<string, string[]>();
   const hrCredentials: string[][] = [];
   for (const row of hrSort) {
-
     const mode = row["Mode"]?.toLowerCase().trim();
 
     if (mode !== "online" && mode !== "both") continue;
@@ -97,11 +95,13 @@ async function main() {
 
     if (!name || !company) continue;
 
-    const username = `hr_${company}_${name}`
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "_");
+    const username =
+      name.toLowerCase().replace(/[^a-z0-9]/g, "") +
+      "@" +
+      company.toLowerCase().replace(/[^a-z0-9]/g, "") +
+      ".com";
 
-    const password = crypto.randomUUID().slice(0, 8);
+    const password = "training2026";
     const hash = await bcrypt.hash(password, 10);
     console.log("HR added:", name, company, mode);
     const user = await prisma.user.upsert({
@@ -156,7 +156,7 @@ async function main() {
         gdScore: scores?.gd ?? 0,
         resumeUrl:
           row[
-          "Attach a copy of your Resume\n\nResume must be in PDF Format.\nName of the file should be your 13 digit registration number only.\nEg. 2127210101001.pdf"
+            "Attach a copy of your Resume\n\nResume must be in PDF Format.\nName of the file should be your 13 digit registration number only.\nEg. 2127210101001.pdf"
           ],
       },
       create: {
@@ -167,7 +167,7 @@ async function main() {
         gdScore: scores?.gd ?? 0,
         resumeUrl:
           row[
-          "Attach a copy of your Resume\n\nResume must be in PDF Format.\nName of the file should be your 13 digit registration number only.\nEg. 2127210101001.pdf"
+            "Attach a copy of your Resume\n\nResume must be in PDF Format.\nName of the file should be your 13 digit registration number only.\nEg. 2127210101001.pdf"
           ],
       },
     });
@@ -178,7 +178,6 @@ async function main() {
   const orderMap: Record<string, number> = {};
   const companyCounter: Record<string, number> = {};
   const hrOrder: Record<string, number> = {};
-
 
   for (const row of deptAlloc) {
     const reg = String(row["REGISTRATION NUMBER"]).trim();
@@ -194,14 +193,13 @@ async function main() {
       session2 ? row[session2] : null,
     ];
 
-
     for (const session of sessions) {
       if (!session) continue;
 
       const company = normalizeCompany(session);
 
-      const hrIds = [...hrMap.entries()].find(([k]) =>
-        k.includes(company) || company.includes(k)
+      const hrIds = [...hrMap.entries()].find(
+        ([k]) => k.includes(company) || company.includes(k),
       )?.[1];
 
       if (!hrIds) {
@@ -247,13 +245,11 @@ async function main() {
     const hrId = hrIds?.[0];
     if (!hrId) continue;
 
-    const username = `vol_${volunteer}`
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "_");
+    const username =
+      volunteer.toLowerCase().replace(/[^a-z0-9]/g, "") + "@forese.co.in";
 
-    const password = crypto.randomUUID().slice(0, 8);
+    const password = "volunteer2026@pass";
     const hash = await bcrypt.hash(password, 10);
-
     await prisma.user.upsert({
       where: { username },
       update: {},
