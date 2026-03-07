@@ -36,8 +36,8 @@ async function main() {
   }
 
   const hrSort = await getSheet(
-    "1wfSWLZCkz4x5egFfYEMRKPRvUuRPlh7MMvt15AGQWrQ",
-    "'HR Sort'!A:Z",
+    "1Co6V9a0rLQr4jxDOI-DGinFM2cdhv8Jo4wP943QQckw",
+    "'Main List'!A:Z",
   );
 
   const deptTabs = [
@@ -78,6 +78,10 @@ async function main() {
   const hrCredentials: string[][] = [];
   for (const row of hrSort) {
 
+    const mode = row["Mode"]?.toLowerCase().trim();
+
+    if (mode !== "online" && mode !== "both") continue;
+
     const name = row["HR Name"];
     const company = row["Company"];
 
@@ -89,7 +93,7 @@ async function main() {
 
     const password = crypto.randomUUID().slice(0, 8);
     const hash = await bcrypt.hash(password, 10);
-
+    console.log("HR added:", name, company, mode);
     const user = await prisma.user.upsert({
       where: { username },
       update: {},
