@@ -4,6 +4,15 @@ import { writeSheet } from "./googleSheets";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
 
+function normalizeCompany(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/\(.*?\)/g, "")
+    .replace(/pvt ltd|private limited|ltd/g, "")
+    .replace(/[^a-z0-9]/g, "")
+    .trim();
+}
+
 async function main() {
   const resumes = await getSheet(
     "1BGK7a9mgw8y6baJLN9MY_yxZz6yHH4l3uLTofBKgcN4",
@@ -114,10 +123,7 @@ async function main() {
 
     hrCredentials.push([name, company, username, password]);
 
-    const key = company
-      .replace(/\(.*?\)/g, "")
-      .trim()
-      .toLowerCase();
+    const key = normalizeCompany(company);
     if (!hrMap.has(key)) hrMap.set(key, []);
     hrMap.get(key)!.push(user.id);
   }
@@ -187,13 +193,10 @@ async function main() {
     for (const session of sessions) {
       if (!session) continue;
 
-      const company = session
-        .replace(/\(.*?\)/g, "")
-        .trim()
-        .toLowerCase();
+      const company = normalizeCompany(session);
 
       const hrIds = [...hrMap.entries()].find(([k]) =>
-        company.includes(k)
+        k.includes(company) || company.includes(k)
       )?.[1];
 
       if (!hrIds) {
