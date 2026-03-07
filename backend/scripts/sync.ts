@@ -1,5 +1,6 @@
 import { getSheet } from "./googleSheets";
 import prisma from "../src/lib/prisma";
+import { writeSheet } from "./googleSheets";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
 
@@ -48,7 +49,7 @@ async function main() {
   console.log("Volunteer rows:", volunteerAlloc.length);
 
   const hrMap = new Map<string, string>();
-
+  const hrCredentials: string[][] = [];
   for (const row of hrSort) {
     console.log("Resumes:", resumes.length);
     console.log("HR rows:", hrSort.length);
@@ -80,6 +81,8 @@ async function main() {
         },
       },
     });
+
+    hrCredentials.push([name, company, username, password]);
 
     const key = company.trim().toLowerCase();
     hrMap.set(key, user.id);
@@ -193,6 +196,12 @@ async function main() {
       },
     });
   }
+  hrCredentials.unshift(["HR Name", "Company", "Username", "Password"]);
+  await writeSheet(
+    "1QDtT5tPAoXv2NvNx-jO8ifpdk1DIsgEUGMG1Zmm9bi8",
+    "'HR Credentials'!A1:D",
+    hrCredentials,
+  );
 }
 main()
   .catch(console.error)

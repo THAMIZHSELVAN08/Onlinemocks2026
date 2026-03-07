@@ -3,7 +3,7 @@ import path from "path";
 
 const auth = new google.auth.GoogleAuth({
   keyFile: path.join(process.cwd(), "credentials/google-service-account.json"),
-  scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
 export async function getSheet(sheetId: string, range: string) {
@@ -32,4 +32,24 @@ export async function getSheet(sheetId: string, range: string) {
   });
 
   return data;
+}
+
+export async function writeSheet(
+  sheetId: string,
+  range: string,
+  values: any[][],
+) {
+  const sheets = google.sheets({
+    version: "v4",
+    auth,
+  });
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: sheetId,
+    range,
+    valueInputOption: "RAW",
+    requestBody: {
+      values,
+    },
+  });
 }
