@@ -74,7 +74,8 @@ async function main() {
   console.log("Dept rows:", deptAlloc.length);
   console.log("Volunteer rows:", volunteerAlloc.length);
 
-  const hrMap = new Map<string, string>();
+
+  const hrMap = new Map<string, string[]>();
   const hrCredentials: string[][] = [];
   for (const row of hrSort) {
 
@@ -117,7 +118,8 @@ async function main() {
       .replace(/\(.*?\)/g, "")
       .trim()
       .toLowerCase();
-    hrMap.set(key, user.id);
+    if (!hrMap.has(key)) hrMap.set(key, []);
+    hrMap.get(key)!.push(user.id);
   }
 
   const studentMap = new Map<string, string>();
@@ -190,8 +192,19 @@ async function main() {
         .trim()
         .toLowerCase();
 
-      const hrId = hrMap.get(company);
-      if (!hrId) continue;
+      const hrIds = [...hrMap.entries()].find(([k]) =>
+        company.includes(k)
+      )?.[1];
+
+      if (!hrIds) {
+        console.log("Company not matched:", company);
+        continue;
+      }
+
+      if (!orderMap[company]) orderMap[company] = 0;
+
+      const hrId = hrIds[orderMap[company] % hrIds.length];
+      orderMap[company]++;
 
       if (!orderMap[hrId]) orderMap[hrId] = 1;
 
@@ -225,8 +238,8 @@ async function main() {
       .replace(/\(.*?\)/g, "")
       .trim()
       .toLowerCase();
-    const hrId = hrMap.get(key);
-
+    const hrIds = hrMap.get(key);
+    const hrId = hrIds?.[0];
     if (!hrId) continue;
 
     const username = `vol_${volunteer}`
