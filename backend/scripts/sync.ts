@@ -176,6 +176,9 @@ async function main() {
   }
 
   const orderMap: Record<string, number> = {};
+  const companyCounter: Record<string, number> = {};
+  const hrOrder: Record<string, number> = {};
+
 
   for (const row of deptAlloc) {
     const reg = String(row["REGISTRATION NUMBER"]).trim();
@@ -190,6 +193,8 @@ async function main() {
       session1 ? row[session1] : null,
       session2 ? row[session2] : null,
     ];
+
+
     for (const session of sessions) {
       if (!session) continue;
 
@@ -204,29 +209,29 @@ async function main() {
         continue;
       }
 
-      if (!orderMap[company]) orderMap[company] = 0;
+      if (!companyCounter[company]) companyCounter[company] = 0;
 
-      const hrId = hrIds[orderMap[company] % hrIds.length];
-      orderMap[company]++;
+      const hrId = hrIds[companyCounter[company] % hrIds.length];
+      companyCounter[company]++;
 
-      if (!orderMap[hrId]) orderMap[hrId] = 1;
+      if (!hrOrder[hrId]) hrOrder[hrId] = 1;
 
       await prisma.hrAssignment.upsert({
         where: {
           hrId_order: {
             hrId,
-            order: orderMap[hrId],
+            order: hrOrder[hrId],
           },
         },
         update: {},
         create: {
           hrId,
           studentId,
-          order: orderMap[hrId],
+          order: hrOrder[hrId],
         },
       });
 
-      orderMap[hrId]++;
+      hrOrder[hrId]++;
     }
   }
 
@@ -237,10 +242,7 @@ async function main() {
 
     if (!hrName || !company || !volunteer) continue;
 
-    const key = company
-      .replace(/\(.*?\)/g, "")
-      .trim()
-      .toLowerCase();
+    const key = normalizeCompany(company);
     const hrIds = hrMap.get(key);
     const hrId = hrIds?.[0];
     if (!hrId) continue;
