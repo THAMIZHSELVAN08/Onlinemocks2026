@@ -10,6 +10,31 @@ async function main() {
     "'Form Responses 1'!A:Z",
   );
 
+  const scoreTabs = [
+    "AE",
+    "BT",
+    "CH",
+    "CE",
+    "CS",
+    "AD",
+    "EE",
+    "EC",
+    "IT",
+    "ME",
+    "MN",
+  ];
+
+  let studentScores: any[] = [];
+
+  for (const tab of scoreTabs) {
+    const data = await getSheet(
+      "1_rB9B4gYnC68_xlxI6Z7WhSG7f83yXqrnoc_EqZRTbI",
+      `'${tab}'!A:Z`,
+    );
+
+    studentScores.push(...data);
+  }
+
   const hrSort = await getSheet(
     "1wfSWLZCkz4x5egFfYEMRKPRvUuRPlh7MMvt15AGQWrQ",
     "'HR Sort'!A:Z",
@@ -44,6 +69,7 @@ async function main() {
     "'Main Sheet'!A:Z",
   );
   console.log("Resumes:", resumes.length);
+  console.log("Student scores:", studentScores.length);
   console.log("HR rows:", hrSort.length);
   console.log("Dept rows:", deptAlloc.length);
   console.log("Volunteer rows:", volunteerAlloc.length);
@@ -51,16 +77,15 @@ async function main() {
   const hrMap = new Map<string, string>();
   const hrCredentials: string[][] = [];
   for (const row of hrSort) {
-    console.log("Resumes:", resumes.length);
-    console.log("HR rows:", hrSort.length);
-    console.log("Dept rows:", deptAlloc.length);
-    console.log("Volunteer rows:", volunteerAlloc.length);
+
     const name = row["HR Name"];
     const company = row["Company"];
 
     if (!name || !company) continue;
 
-    const username = `hr_${company}_${name}`.toLowerCase().replace(/\s+/g, "_");
+    const username = `hr_${company}_${name}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "_");
 
     const password = crypto.randomUUID().slice(0, 8);
     const hash = await bcrypt.hash(password, 10);
@@ -84,33 +109,53 @@ async function main() {
 
     hrCredentials.push([name, company, username, password]);
 
-    const key = company.trim().toLowerCase();
+    const key = company
+      .replace(/\(.*?\)/g, "")
+      .trim()
+      .toLowerCase();
     hrMap.set(key, user.id);
   }
 
   const studentMap = new Map<string, string>();
 
-  for (const row of resumes) {
-    const reg = row["Registration Number"];
+  const scoreMap = new Map<string, { aptitude: number; gd: number }>();
+
+  for (const row of studentScores) {
+    const reg = String(row["regNo"]).trim();
     if (!reg) continue;
+
+    scoreMap.set(reg, {
+      aptitude: Number(row["Apt"] || 0),
+      gd: Number(row["GD"] || 0),
+    });
+  }
+  for (const row of resumes) {
+    const reg = String(row["Registration Number"]).trim();
+    if (!reg) continue;
+
+    const scores = scoreMap.get(reg);
 
     const student = await prisma.student.upsert({
       where: { registerNumber: reg },
       update: {
         name: row["Name"],
         department: row["Department "]?.trim(),
+        aptitudeScore: scores?.aptitude ?? 0,
+        gdScore: scores?.gd ?? 0,
         resumeUrl:
           row[
-            "Attach a copy of your Resume\n\nResume must be in PDF Format.\nName of the file should be your 13 digit registration number only.\nEg. 2127210101001.pdf"
+          "Attach a copy of your Resume\n\nResume must be in PDF Format.\nName of the file should be your 13 digit registration number only.\nEg. 2127210101001.pdf"
           ],
       },
       create: {
         name: row["Name"],
         registerNumber: reg,
         department: row["Department "]?.trim(),
+        aptitudeScore: scores?.aptitude ?? 0,
+        gdScore: scores?.gd ?? 0,
         resumeUrl:
           row[
-            "Attach a copy of your Resume\n\nResume must be in PDF Format.\nName of the file should be your 13 digit registration number only.\nEg. 2127210101001.pdf"
+          "Attach a copy of your Resume\n\nResume must be in PDF Format.\nName of the file should be your 13 digit registration number only.\nEg. 2127210101001.pdf"
           ],
       },
     });
@@ -121,7 +166,7 @@ async function main() {
   const orderMap: Record<string, number> = {};
 
   for (const row of deptAlloc) {
-    const reg = row["REGISTRATION NUMBER"];
+    const reg = String(row["REGISTRATION NUMBER"]).trim();
     const studentId = studentMap.get(reg);
 
     if (!studentId) continue;
@@ -136,7 +181,10 @@ async function main() {
     for (const session of sessions) {
       if (!session) continue;
 
-      const company = session.trim().toLowerCase();
+      const company = session
+        .replace(/\(.*?\)/g, "")
+        .trim()
+        .toLowerCase();
 
       const hrId = hrMap.get(company);
       if (!hrId) continue;
@@ -169,12 +217,17 @@ async function main() {
 
     if (!hrName || !company || !volunteer) continue;
 
-    const key = `${company}-${hrName}`.toLowerCase();
+    const key = company
+      .replace(/\(.*?\)/g, "")
+      .trim()
+      .toLowerCase();
     const hrId = hrMap.get(key);
 
     if (!hrId) continue;
 
-    const username = `vol_${volunteer}`.toLowerCase().replace(/\s+/g, "_");
+    const username = `vol_${volunteer}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "_");
 
     const password = crypto.randomUUID().slice(0, 8);
     const hash = await bcrypt.hash(password, 10);
