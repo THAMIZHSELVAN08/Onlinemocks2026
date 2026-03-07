@@ -69,11 +69,10 @@ const SidebarLink = ({
     <Link to={to} className="block">
       <div
         title={collapsed ? label : undefined}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${collapsed ? "justify-center" : ""} ${
-          isActive
-            ? "bg-green-50 text-green-700"
-            : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-        }`}
+        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${collapsed ? "justify-center" : ""} ${isActive
+          ? "bg-green-50 text-green-700"
+          : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          }`}
       >
         <Icon size={17} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
         {!collapsed && (
@@ -147,6 +146,16 @@ const VolunteerDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [hrInfo, setHrInfo] = useState<{ hrName: string | null; companyName: string | null } | null>(null);
+
+  const fetchHrInfo = async () => {
+    try {
+      const res = await api.get("/volunteer/hr-info");
+      setHrInfo(res.data);
+    } catch (err) {
+      console.error("Failed to fetch HR info", err);
+    }
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -180,6 +189,7 @@ const VolunteerDashboard = () => {
 
   useEffect(() => {
     fetchNotifications();
+    fetchHrInfo();
     if (user?.id) {
       socket.on("student_transferred", () => {
         fetchNotifications();
@@ -296,6 +306,23 @@ const VolunteerDashboard = () => {
           </a>{" "}
         </nav>
 
+        {/* HR Info Card */}
+        {sidebarOpen && hrInfo?.hrName && (
+          <div className="mx-3 mb-3 px-3 py-2.5 rounded-xl bg-blue-50 border border-blue-100">
+            <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mb-1">Assigned HR</p>
+            <p className="text-[13px] font-semibold text-blue-800 truncate">{hrInfo.hrName}</p>
+            {hrInfo.companyName && (
+              <p className="text-[11px] text-blue-500 truncate mt-0.5">{hrInfo.companyName}</p>
+            )}
+          </div>
+        )}
+        {!sidebarOpen && hrInfo?.hrName && (
+          <div className="mx-3 mb-3 flex justify-center" title={`HR: ${hrInfo.hrName}${hrInfo.companyName ? ` (${hrInfo.companyName})` : ""}`}>
+            <div className="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center">
+              <User size={14} className="text-blue-500" />
+            </div>
+          </div>
+        )}
         {/* Logout */}
         <div className="px-3 pb-5">
           <button
@@ -366,6 +393,15 @@ const VolunteerDashboard = () => {
             collapsed={false}
           />
         </nav>
+        {hrInfo?.hrName && (
+          <div className="mx-3 mb-3 px-3 py-2.5 rounded-xl bg-blue-50 border border-blue-100">
+            <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mb-1">Assigned HR</p>
+            <p className="text-[13px] font-semibold text-blue-800 truncate">{hrInfo.hrName}</p>
+            {hrInfo.companyName && (
+              <p className="text-[11px] text-blue-500 truncate mt-0.5">{hrInfo.companyName}</p>
+            )}
+          </div>
+        )}
         <div className="px-3 pb-6">
           <button
             onClick={logout}
@@ -448,7 +484,7 @@ const VolunteerDashboard = () => {
 
 const Overview = () => {
   const { user } = useAuthStore();
-  const [stats, setStats] = useState({ enrolledToday: 0, totalEnrolled: 0 });
+  const [stats, setStats] = useState({ studentsEvaluated: 0, totalEnrolled: 0 });
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -546,7 +582,7 @@ const Overview = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard
           title="Students Evaluated"
-          value={stats.enrolledToday}
+          value={stats.studentsEvaluated}
           icon={Activity}
           themeIndex={0}
         />
@@ -576,11 +612,10 @@ const Overview = () => {
           </div>
           <button
             onClick={() => setShowFilters(true)}
-            className={`flex items-center gap-2 h-10 px-4 rounded-xl border text-[13px] font-medium transition-all ${
-              filterDept !== "ALL" || filterStatus !== "ALL"
-                ? "bg-emerald-500 border-emerald-500 text-white"
-                : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-            }`}
+            className={`flex items-center gap-2 h-10 px-4 rounded-xl border text-[13px] font-medium transition-all ${filterDept !== "ALL" || filterStatus !== "ALL"
+              ? "bg-emerald-500 border-emerald-500 text-white"
+              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+              }`}
           >
             <Filter size={15} /> Filters
             {(filterDept !== "ALL" || filterStatus !== "ALL") && (
@@ -751,7 +786,7 @@ const Overview = () => {
                     </td>
                     <td className="px-6 py-4">
                       {s.evaluation_status === "COMPLETED" ||
-                      s.status === "COMPLETED" ? (
+                        s.status === "COMPLETED" ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[11px] font-semibold border border-emerald-100">
                           <CheckCircle2 size={11} /> Evaluated
                         </span>
@@ -989,19 +1024,17 @@ const Notifications = ({
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               onClick={() => !n.isRead && markAsRead(n.id)}
-              className={`group p-4 bg-white rounded-2xl border transition-all cursor-pointer ${
-                n.isRead
-                  ? "border-slate-100 opacity-75"
-                  : "border-emerald-100 bg-emerald-50/10 shadow-sm"
-              } hover:border-emerald-200`}
+              className={`group p-4 bg-white rounded-2xl border transition-all cursor-pointer ${n.isRead
+                ? "border-slate-100 opacity-75"
+                : "border-emerald-100 bg-emerald-50/10 shadow-sm"
+                } hover:border-emerald-200`}
             >
               <div className="flex gap-4">
                 <div
-                  className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center ${
-                    n.isRead
-                      ? "bg-slate-50 text-slate-400"
-                      : "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                  }`}
+                  className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center ${n.isRead
+                    ? "bg-slate-50 text-slate-400"
+                    : "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                    }`}
                 >
                   <Bell size={18} />
                 </div>
@@ -1167,19 +1200,17 @@ function RatingRow({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06 }}
-      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
-        value > 0
-          ? "border-blue-200 bg-blue-50/40"
-          : "border-slate-100 bg-white"
-      }`}
+      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${value > 0
+        ? "border-blue-200 bg-blue-50/40"
+        : "border-slate-100 bg-white"
+        }`}
     >
       <div className="px-5 pt-5 pb-4 flex items-start gap-3">
         <div
-          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[12px] font-extrabold ${
-            value > 0
-              ? "bg-blue-600 text-white"
-              : "bg-slate-100 text-slate-400 border border-slate-200"
-          }`}
+          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[12px] font-extrabold ${value > 0
+            ? "bg-blue-600 text-white"
+            : "bg-slate-100 text-slate-400 border border-slate-200"
+            }`}
         >
           {String(index + 1).padStart(2, "0")}
         </div>
@@ -1400,11 +1431,10 @@ const EventFeedback = () => {
       {/* ── Submit bar ── */}
       <div className="w-full max-w-3xl mt-8">
         <div
-          className={`rounded-2xl border px-8 py-5 flex items-center justify-between gap-4 transition-all ${
-            isFormComplete
-              ? "bg-blue-600 border-blue-600 shadow-xl shadow-blue-200"
-              : "bg-white border-slate-100 shadow-sm outline outline-1 outline-slate-50"
-          }`}
+          className={`rounded-2xl border px-8 py-5 flex items-center justify-between gap-4 transition-all ${isFormComplete
+            ? "bg-blue-600 border-blue-600 shadow-xl shadow-blue-200"
+            : "bg-white border-slate-100 shadow-sm outline outline-1 outline-slate-50"
+            }`}
         >
           <div className="flex items-center gap-3">
             <div
@@ -1419,11 +1449,10 @@ const EventFeedback = () => {
           <button
             onClick={handleSubmit}
             disabled={submitting || !isFormComplete}
-            className={`h-11 px-10 rounded-xl text-[13px] font-bold flex items-center gap-2 transition-all active:scale-95 shrink-0 ${
-              isFormComplete
-                ? "bg-white text-blue-700 hover:bg-blue-50 hover:shadow-lg"
-                : "bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100"
-            }`}
+            className={`h-11 px-10 rounded-xl text-[13px] font-bold flex items-center gap-2 transition-all active:scale-95 shrink-0 ${isFormComplete
+              ? "bg-white text-blue-700 hover:bg-blue-50 hover:shadow-lg"
+              : "bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100"
+              }`}
           >
             {submitting ? (
               <Loader2 size={16} className="animate-spin" />

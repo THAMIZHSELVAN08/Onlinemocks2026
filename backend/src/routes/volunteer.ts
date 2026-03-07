@@ -25,30 +25,55 @@ router.get("/stats", auth, checkRole(["VOLUNTEER"]), async (req, res) => {
     });
 
     if (!volunteer?.assignedHrId) {
-      return res.json({ enrolledToday: 0, totalEnrolled: 0 });
+      return res.json({ studentsEvaluated: 0, totalEnrolled: 0 });
     }
 
-    const [today, total] = await Promise.all([
+    const [studentsEvaluated, total] = await Promise.all([
+      prisma.evaluation.count({
+        where: { hrId: volunteer.assignedHrId },
+      }),
       prisma.hrAssignment.count({
         where: {
           hrId: volunteer.assignedHrId,
-          assignedAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          },
+          status: { not: "CANCELLED" },
         },
-      }),
-      prisma.hrAssignment.count({
-        where: { hrId: volunteer.assignedHrId },
       }),
     ]);
 
-    res.json({ enrolledToday: today, totalEnrolled: total });
+    res.json({ studentsEvaluated, totalEnrolled: total });
   } catch (err) {
     res.status(500).send("Server Error");
   }
 });
 
-// ── GET /students ────────────────────────────────────────────────────────────
+// ── GET /hr-info ──────────────────────────────────────────────────────────────
+router.get("/hr-info", auth, checkRole(["VOLUNTEER"]), async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const volunteer = await prisma.volunteerProfile.findUnique({
+      where: { id: req.user.id },
+      include: {
+        assignedHr: {
+          select: { name: true, companyName: true },
+        },
+      },
+    });
+
+    if (!volunteer?.assignedHr) {
+      return res.json({ hrName: null, companyName: null });
+    }
+
+    res.json({
+      hrName: volunteer.assignedHr.name ?? null,
+      companyName: volunteer.assignedHr.companyName ?? null,
+    });
+  } catch (err) {
+    res.status(500).send("Server Error");
+  }
+});
+
+
 
 router.get("/students", auth, checkRole(["VOLUNTEER"]), async (req, res) => {
   try {
