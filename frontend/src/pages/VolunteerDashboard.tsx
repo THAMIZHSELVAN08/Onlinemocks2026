@@ -54,11 +54,13 @@ const SidebarLink = ({
   icon: Icon,
   label,
   collapsed,
+  onClick,
 }: {
   to: string;
   icon: React.ElementType;
   label: string;
   collapsed: boolean;
+  onClick?: (e: React.MouseEvent) => void;
 }) => {
   const location = useLocation();
   const isActive =
@@ -66,7 +68,7 @@ const SidebarLink = ({
     (to !== "/volunteer" && location.pathname.startsWith(to));
 
   return (
-    <Link to={to} className="block">
+    <Link to={to} className="block" onClick={onClick}>
       <div
         title={collapsed ? label : undefined}
         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${collapsed ? "justify-center" : ""} ${isActive
@@ -292,18 +294,19 @@ const VolunteerDashboard = () => {
             </p>
           )}
           {!sidebarOpen && <div className="my-3 border-t border-slate-200" />}
-          <a
-            href="https://docs.google.com/presentation/d/1PWxxxPqVPTiVi-7KL7BcUJOPFf74XmfupS6fIrfgvOU/edit?usp=sharing"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <SidebarLink
-              to="#"
-              icon={HelpCircle}
-              label="Help & Docs"
-              collapsed={!sidebarOpen}
-            />
-          </a>{" "}
+          <SidebarLink
+            to="#"
+            icon={HelpCircle}
+            label="Help & Docs"
+            onClick={(e: React.MouseEvent) => {
+              e.preventDefault();
+              window.open(
+                "https://docs.google.com/presentation/d/1PWxxxPqVPTiVi-7KL7BcUJOPFf74XmfupS6fIrfgvOU/edit?usp=sharing",
+                "_blank"
+              );
+            }}
+            collapsed={!sidebarOpen}
+          />
         </nav>
 
         {/* HR Info Card */}
@@ -387,9 +390,16 @@ const VolunteerDashboard = () => {
             Support
           </p>
           <SidebarLink
-            to="/volunteer/docs"
+            to="#"
             icon={HelpCircle}
             label="Help & Docs"
+            onClick={(e: React.MouseEvent) => {
+              e.preventDefault();
+              window.open(
+                "https://docs.google.com/presentation/d/1PWxxxPqVPTiVi-7KL7BcUJOPFf74XmfupS6fIrfgvOU/edit?usp=sharing",
+                "_blank"
+              );
+            }}
             collapsed={false}
           />
         </nav>
