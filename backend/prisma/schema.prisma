@@ -55,6 +55,7 @@ model User {
   hrAssignments    HrAssignment[]
 
   feedbacks Feedback[] // ← ADD THIS
+  volunteerFeedbacks VolunteerFeedback[] @relation("VolunteerFeedbacks")
 }
 
 model PipelineProfile {
@@ -192,4 +193,24 @@ model Feedback {
 
   @@index([hrId])
   @@map("feedbacks")
+}
+
+model VolunteerFeedback {
+  id                      Int      @id @default(autoincrement())
+  volunteerId             String   @db.Uuid @map("volunteer_id")
+  clarityOfInstructions   Int      @map("clarity_of_instructions")
+  hrCooperation           Int      @map("hr_cooperation")
+  organizationOfSchedule  Int      @map("organization_of_schedule")
+  softwareEase            Int      @map("software_ease")
+  workloadManagement      Int      @map("workload_management")
+  overallExperience       Int      @map("overall_experience")
+  issuesFaced             String?  @map("issues_faced")
+  improvementSuggestions  String?  @map("improvement_suggestions")
+  additionalComments      String?  @map("additional_comments")
+  submittedAt             DateTime @default(now()) @map("submitted_at")
+
+  volunteer User @relation("VolunteerFeedbacks", fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  @@index([volunteerId])
+  @@map("volunteer_feedbacks")
 }

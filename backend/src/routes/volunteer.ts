@@ -313,6 +313,63 @@ router.delete("/notifications/:id", auth, async (req, res) => {
   }
 });
 
+
+// ── POST /feedback ──────────────────────────────────────────────────────────
+const VolunteerFeedbackSchema = z.object({
+  clarityOfInstructions: z.number().int().min(1).max(10),
+  hrCooperation: z.number().int().min(1).max(10),
+  organizationOfSchedule: z.number().int().min(1).max(10),
+  softwareEase: z.number().int().min(1).max(10),
+  workloadManagement: z.number().int().min(1).max(10),
+  overallExperience: z.number().int().min(1).max(10),
+  issuesFaced: z.string().optional(),
+  improvementSuggestions: z.string().optional(),
+  additionalComments: z.string().optional(),
+});
+
+router.post("/feedback", auth, checkRole(["VOLUNTEER"]), async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const parsed = VolunteerFeedbackSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid feedback data", errors: parsed.error.errors });
+    }
+
+    const {
+      clarityOfInstructions,
+      hrCooperation,
+      organizationOfSchedule,
+      softwareEase,
+      workloadManagement,
+      overallExperience,
+      issuesFaced,
+      improvementSuggestions,
+      additionalComments,
+    } = parsed.data;
+
+    await prisma.volunteerFeedback.create({
+      data: {
+        volunteerId: req.user.id,
+        clarityOfInstructions,
+        hrCooperation,
+        organizationOfSchedule,
+        softwareEase,
+        workloadManagement,
+        overallExperience,
+        issuesFaced,
+        improvementSuggestions,
+        additionalComments,
+      },
+    });
+
+    res.json({ message: "Feedback submitted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server Error");
+  }
+});
+
 export default router;
 
 registry.registerPath({

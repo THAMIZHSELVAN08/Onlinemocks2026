@@ -162,14 +162,12 @@ function RatingRow({ index, label, sub, value, onChange }: {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06 }}
-      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
-        value > 0 ? 'border-blue-200 bg-blue-50/40' : 'border-slate-100 bg-white'
-      }`}
+      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${value > 0 ? 'border-blue-200 bg-blue-50/40' : 'border-slate-100 bg-white'
+        }`}
     >
       <div className="px-5 pt-5 pb-4 flex items-start gap-3">
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[12px] font-extrabold ${
-          value > 0 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400 border border-slate-200'
-        }`}>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[12px] font-extrabold ${value > 0 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400 border border-slate-200'
+          }`}>
           {String(index + 1).padStart(2, '0')}
         </div>
         <div className="flex-1 min-w-0">
@@ -185,7 +183,7 @@ function RatingRow({ index, label, sub, value, onChange }: {
       </div>
       <div className="px-5 pb-5">
         <div className="flex gap-1.5 flex-wrap">
-          {[1,2,3,4,5,6,7,8,9,10].map(n => (
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
             <button
               key={n}
               type="button"
@@ -207,13 +205,11 @@ function SidebarLink({ active, onClick, icon: Icon, label, collapsed }: any) {
     <button
       onClick={onClick}
       title={collapsed ? label : undefined}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-        collapsed ? "justify-center" : ""
-      } ${
-        active
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${collapsed ? "justify-center" : ""
+        } ${active
           ? "bg-blue-50 text-blue-600"
           : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-      }`}
+        }`}
     >
       <Icon size={17} strokeWidth={active ? 2.5 : 2} className="shrink-0" />
       {!collapsed && (
@@ -228,8 +224,8 @@ function SidebarLink({ active, onClick, icon: Icon, label, collapsed }: any) {
 
 const CARD_THEMES = [
   { bg: "bg-emerald-50", icon: "bg-emerald-500", value: "text-emerald-800", label: "text-emerald-600" },
-  { bg: "bg-blue-50",    icon: "bg-blue-500",    value: "text-blue-800",    label: "text-blue-600"    },
-  { bg: "bg-violet-50",  icon: "bg-violet-500",  value: "text-violet-800",  label: "text-violet-600"  },
+  { bg: "bg-blue-50", icon: "bg-blue-500", value: "text-blue-800", label: "text-blue-600" },
+  { bg: "bg-violet-50", icon: "bg-violet-500", value: "text-violet-800", label: "text-violet-600" },
 ];
 
 function SummaryCard({ title, value, subtext, icon: Icon, themeIndex = 0 }: any) {
@@ -328,15 +324,17 @@ export default function HRDashboard() {
 
   const submitFeedback = async () => {
     const allRated = [feedbackForm.technicalKnowledge, feedbackForm.serviceAndCoordination,
-      feedbackForm.communicationSkills, feedbackForm.futureParticipation, feedbackForm.punctualityAndInterest,
+    feedbackForm.communicationSkills, feedbackForm.futureParticipation, feedbackForm.punctualityAndInterest,
     ].every(v => v > 0);
     if (!allRated) return alert("Please rate all criteria.");
     setSubmittingFeedback(true);
     try {
       await api.post("/hr/feedback", feedbackForm);
       alert("Feedback submitted. Thank you!");
-      setFeedbackForm({ technicalKnowledge: 0, serviceAndCoordination: 0, communicationSkills: 0,
-        futureParticipation: 0, punctualityAndInterest: 0, suggestions: "", issuesFaced: "", improvementSuggestions: "" });
+      setFeedbackForm({
+        technicalKnowledge: 0, serviceAndCoordination: 0, communicationSkills: 0,
+        futureParticipation: 0, punctualityAndInterest: 0, suggestions: "", issuesFaced: "", improvementSuggestions: ""
+      });
       setActiveTab("overview");
     } catch { alert("Submission failed."); }
     finally { setSubmittingFeedback(false); }
@@ -345,7 +343,7 @@ export default function HRDashboard() {
   const filteredStudents = students.filter(s => {
     const q = searchTerm.toLowerCase();
     return (
-      (s.name.toLowerCase().includes(q) || s.register_number.toLowerCase().includes(q)) &&
+      ((s.name ?? "").toLowerCase().includes(q) || (s.register_number ?? "").toLowerCase().includes(q)) &&
       (filterStatus === "ALL" || s.status === filterStatus) &&
       (filterDept === "ALL" || s.department === filterDept)
     );
@@ -359,9 +357,9 @@ export default function HRDashboard() {
 
   const tabLabel =
     activeTab === "overview" ? "Dashboard" :
-    activeTab === "students" ? "Student Directory" :
-    activeTab === "notifications" ? "Notifications" :
-    " Feedback";
+      activeTab === "students" ? "Student Directory" :
+        activeTab === "notifications" ? "Notifications" :
+          " Feedback";
 
   return (
     <div className="bg-slate-100 font-sans text-slate-900 md:p-2 flex gap-0" style={{ height: "100vh" }}>
@@ -400,7 +398,7 @@ export default function HRDashboard() {
 
           {sidebarOpen && <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 pt-5 pb-1.5">Support</p>}
           {!sidebarOpen && <div className="my-3 border-t border-slate-200" />}
-          <SidebarLink active={false} collapsed={!sidebarOpen} onClick={() => {}} icon={HelpCircle} label="Help & Docs" />
+          <SidebarLink active={false} collapsed={!sidebarOpen} onClick={() => { }} icon={HelpCircle} label="Help & Docs" />
         </nav>
 
         <div className="px-3 pb-5">
@@ -432,7 +430,7 @@ export default function HRDashboard() {
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 pt-4 pb-1">Management</p>
           <SidebarLink active={activeTab === "students"} collapsed={false} onClick={() => { setActiveTab("students"); setMobileOpen(false); }} icon={Users} label="Students" />
           <SidebarLink active={activeTab === "feedback"} collapsed={false} onClick={() => { setActiveTab("feedback"); setMobileOpen(false); }} icon={Star} label="Event Feedback" />
-          <SidebarLink active={false} collapsed={false} onClick={() => {}} icon={Bell} label="Notifications" />
+          <SidebarLink active={false} collapsed={false} onClick={() => { }} icon={Bell} label="Notifications" />
         </nav>
         <div className="px-3 pb-6">
           <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
@@ -605,11 +603,10 @@ export default function HRDashboard() {
                       </div>
                       <button
                         onClick={() => setShowFilters(true)}
-                        className={`flex items-center gap-2 h-10 px-4 rounded-xl border text-[13px] font-medium transition-all ${
-                          filterDept !== "ALL" || filterStatus !== "ALL"
+                        className={`flex items-center gap-2 h-10 px-4 rounded-xl border text-[13px] font-medium transition-all ${filterDept !== "ALL" || filterStatus !== "ALL"
                             ? "bg-blue-600 border-blue-600 text-white"
                             : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                        }`}
+                          }`}
                       >
                         <Filter size={15} /> Filters
                         {(filterDept !== "ALL" || filterStatus !== "ALL") && (
@@ -757,11 +754,10 @@ export default function HRDashboard() {
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                                     onClick={() => navigate(`/hr/evaluate/${s.id}`)}
-                                    className={`px-4 py-1.5 rounded-lg text-[12px] font-semibold transition-all shadow-sm ${
-                                      s.status === "COMPLETED"
+                                    className={`px-4 py-1.5 rounded-lg text-[12px] font-semibold transition-all shadow-sm ${s.status === "COMPLETED"
                                         ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
                                         : "bg-blue-600 text-white hover:bg-blue-700"
-                                    }`}
+                                      }`}
                                   >
                                     {s.status === "COMPLETED" ? "Edit" : "Evaluate"}
                                   </button>
@@ -814,14 +810,12 @@ export default function HRDashboard() {
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           onClick={() => !n.isRead && markAsRead(n.id)}
-                          className={`group p-4 bg-white rounded-2xl border transition-all cursor-pointer ${
-                            n.isRead ? "border-slate-100 opacity-75" : "border-blue-100 bg-blue-50/10 shadow-sm"
-                          } hover:border-blue-200`}
+                          className={`group p-4 bg-white rounded-2xl border transition-all cursor-pointer ${n.isRead ? "border-slate-100 opacity-75" : "border-blue-100 bg-blue-50/10 shadow-sm"
+                            } hover:border-blue-200`}
                         >
                           <div className="flex gap-4">
-                            <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center ${
-                              n.isRead ? "bg-slate-50 text-slate-400" : "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                            }`}>
+                            <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center ${n.isRead ? "bg-slate-50 text-slate-400" : "bg-blue-600 text-white shadow-md shadow-blue-600/20"
+                              }`}>
                               <Bell size={18} />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -921,11 +915,10 @@ export default function HRDashboard() {
                     </div>
 
                     <div className="w-full max-w-3xl mb-20">
-                      <div className={`rounded-2xl border px-8 py-5 flex items-center justify-between gap-4 transition-all ${
-                        isFormComplete
+                      <div className={`rounded-2xl border px-8 py-5 flex items-center justify-between gap-4 transition-all ${isFormComplete
                           ? 'bg-blue-600 border-blue-600 shadow-xl shadow-blue-200'
                           : 'bg-white border-slate-100 shadow-sm outline outline-1 outline-slate-50'
-                      }`}>
+                        }`}>
                         <div className="flex items-center gap-3">
                           <div className={`w-2.5 h-2.5 rounded-full ${isFormComplete ? 'bg-white animate-pulse' : 'bg-slate-200'}`} />
                           <span className={`text-[13px] font-bold ${isFormComplete ? 'text-white' : 'text-slate-400'}`}>
@@ -935,11 +928,10 @@ export default function HRDashboard() {
                         <button
                           onClick={submitFeedback}
                           disabled={submittingFeedback || !isFormComplete}
-                          className={`h-11 px-10 rounded-xl text-[13px] font-bold flex items-center gap-2 transition-all active:scale-95 shrink-0 ${
-                            isFormComplete
+                          className={`h-11 px-10 rounded-xl text-[13px] font-bold flex items-center gap-2 transition-all active:scale-95 shrink-0 ${isFormComplete
                               ? 'bg-white text-blue-700 hover:bg-blue-50 hover:shadow-lg'
                               : 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
-                          }`}
+                            }`}
                         >
                           {submittingFeedback ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
                           {submittingFeedback ? 'Submitting...' : 'Submit Feedback'}

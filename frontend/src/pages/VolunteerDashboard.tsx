@@ -13,24 +13,24 @@ import { socket } from '../api/socket';
 import { toast } from 'sonner';
 
 interface Notification {
-  id: string;
-  title: string | null;
-  message: string;
-  type: string;
-  isRead: boolean;
-  createdAt: string;
+    id: string;
+    title: string | null;
+    message: string;
+    type: string;
+    isRead: boolean;
+    createdAt: string;
 }
 
 interface FeedbackFormState {
-  clarityOfInstructions: number;
-  hrCooperation: number;
-  organizationOfSchedule: number;
-  softwareEase: number;
-  workloadManagement: number;
-  overallExperience: number;
-  issuesFaced: string;
-  improvementSuggestions: string;
-  additionalComments: string;
+    clarityOfInstructions: number;
+    hrCooperation: number;
+    organizationOfSchedule: number;
+    softwareEase: number;
+    workloadManagement: number;
+    overallExperience: number;
+    issuesFaced: string;
+    improvementSuggestions: string;
+    additionalComments: string;
 }
 
 // ─── Sidebar Link ─────────────────────────────────────────────────────────────
@@ -47,11 +47,10 @@ const SidebarLink = ({
         <Link to={to} className="block">
             <div
                 title={collapsed ? label : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${collapsed ? 'justify-center' : ''} ${
-                    isActive
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${collapsed ? 'justify-center' : ''} ${isActive
                         ? 'bg-green-50 text-green-700'
                         : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-                }`}
+                    }`}
             >
                 <Icon size={17} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
                 {!collapsed && (
@@ -69,7 +68,7 @@ const SidebarLink = ({
 
 const STAT_THEMES = [
     { bg: 'bg-emerald-50', icon: 'bg-emerald-500', value: 'text-emerald-800', label: 'text-emerald-600' },
-    { bg: 'bg-slate-100',  icon: 'bg-slate-500',   value: 'text-slate-800',   label: 'text-slate-500'  },
+    { bg: 'bg-slate-100', icon: 'bg-slate-500', value: 'text-slate-800', label: 'text-slate-500' },
 ];
 
 function StatCard({ title, value, icon: Icon, themeIndex = 0 }: {
@@ -140,9 +139,9 @@ const VolunteerDashboard = () => {
 
     const navLabel =
         location.pathname === '/volunteer' ? 'Dashboard' :
-        location.pathname === '/volunteer/notifications' ? 'Notifications' :
-        location.pathname === '/volunteer/feedback' ? 'Event Feedback' :
-        location.pathname.startsWith('/volunteer/enroll') ? 'Add Student' : '';
+            location.pathname === '/volunteer/notifications' ? 'Notifications' :
+                location.pathname === '/volunteer/feedback' ? 'Event Feedback' :
+                    location.pathname.startsWith('/volunteer/enroll') ? 'Add Student' : '';
 
     return (
         <div className="bg-slate-100 font-sans text-slate-900 md:p-2 flex gap-0" style={{ height: '100vh' }}>
@@ -336,7 +335,7 @@ const Overview = () => {
 
     const filteredStudents = students.filter(s => {
         const q = searchTerm.toLowerCase();
-        const matchesSearch = s.name.toLowerCase().includes(q) || s.register_number.toLowerCase().includes(q);
+        const matchesSearch = (s.name ?? '').toLowerCase().includes(q) || (s.register_number ?? '').toLowerCase().includes(q);
         const matchesDept = filterDept === 'ALL' || s.department === filterDept;
         const matchesStatus = filterStatus === 'ALL' ||
             (filterStatus === 'COMPLETED'
@@ -373,11 +372,10 @@ const Overview = () => {
                     </div>
                     <button
                         onClick={() => setShowFilters(true)}
-                        className={`flex items-center gap-2 h-10 px-4 rounded-xl border text-[13px] font-medium transition-all ${
-                            filterDept !== 'ALL' || filterStatus !== 'ALL'
+                        className={`flex items-center gap-2 h-10 px-4 rounded-xl border text-[13px] font-medium transition-all ${filterDept !== 'ALL' || filterStatus !== 'ALL'
                                 ? 'bg-emerald-500 border-emerald-500 text-white'
                                 : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                        }`}
+                            }`}
                     >
                         <Filter size={15} /> Filters
                         {(filterDept !== 'ALL' || filterStatus !== 'ALL') && (
@@ -655,14 +653,12 @@ const Notifications = ({ notifications, markAsRead, markAllAsRead }: {
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             onClick={() => !n.isRead && markAsRead(n.id)}
-                            className={`group p-4 bg-white rounded-2xl border transition-all cursor-pointer ${
-                                n.isRead ? "border-slate-100 opacity-75" : "border-emerald-100 bg-emerald-50/10 shadow-sm"
-                            } hover:border-emerald-200`}
+                            className={`group p-4 bg-white rounded-2xl border transition-all cursor-pointer ${n.isRead ? "border-slate-100 opacity-75" : "border-emerald-100 bg-emerald-50/10 shadow-sm"
+                                } hover:border-emerald-200`}
                         >
                             <div className="flex gap-4">
-                                <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center ${
-                                    n.isRead ? "bg-slate-50 text-slate-400" : "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                                }`}>
+                                <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center ${n.isRead ? "bg-slate-50 text-slate-400" : "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                                    }`}>
                                     <Bell size={18} />
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -778,14 +774,12 @@ function RatingRow({ index, label, sub, value, onChange }: {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.06 }}
-            className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
-                value > 0 ? 'border-blue-200 bg-blue-50/40' : 'border-slate-100 bg-white'
-            }`}
+            className={`rounded-2xl border transition-all duration-200 overflow-hidden ${value > 0 ? 'border-blue-200 bg-blue-50/40' : 'border-slate-100 bg-white'
+                }`}
         >
             <div className="px-5 pt-5 pb-4 flex items-start gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[12px] font-extrabold ${
-                    value > 0 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400 border border-slate-200'
-                }`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[12px] font-extrabold ${value > 0 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400 border border-slate-200'
+                    }`}>
                     {String(index + 1).padStart(2, '0')}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -801,7 +795,7 @@ function RatingRow({ index, label, sub, value, onChange }: {
             </div>
             <div className="px-5 pb-5">
                 <div className="flex gap-1.5 flex-wrap">
-                    {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
                         <button
                             key={n}
                             type="button"
@@ -953,11 +947,10 @@ const EventFeedback = () => {
 
             {/* ── Submit bar ── */}
             <div className="w-full max-w-3xl mt-8">
-                <div className={`rounded-2xl border px-8 py-5 flex items-center justify-between gap-4 transition-all ${
-                    isFormComplete
+                <div className={`rounded-2xl border px-8 py-5 flex items-center justify-between gap-4 transition-all ${isFormComplete
                         ? 'bg-blue-600 border-blue-600 shadow-xl shadow-blue-200'
                         : 'bg-white border-slate-100 shadow-sm outline outline-1 outline-slate-50'
-                }`}>
+                    }`}>
                     <div className="flex items-center gap-3">
                         <div className={`w-2.5 h-2.5 rounded-full ${isFormComplete ? 'bg-white animate-pulse' : 'bg-slate-200'}`} />
                         <span className={`text-[13px] font-bold ${isFormComplete ? 'text-white' : 'text-slate-400'}`}>
@@ -967,11 +960,10 @@ const EventFeedback = () => {
                     <button
                         onClick={handleSubmit}
                         disabled={submitting || !isFormComplete}
-                        className={`h-11 px-10 rounded-xl text-[13px] font-bold flex items-center gap-2 transition-all active:scale-95 shrink-0 ${
-                            isFormComplete
+                        className={`h-11 px-10 rounded-xl text-[13px] font-bold flex items-center gap-2 transition-all active:scale-95 shrink-0 ${isFormComplete
                                 ? 'bg-white text-blue-700 hover:bg-blue-50 hover:shadow-lg'
                                 : 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
-                        }`}
+                            }`}
                     >
                         {submitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
                         {submitting ? 'Submitting...' : 'Submit Feedback'}
