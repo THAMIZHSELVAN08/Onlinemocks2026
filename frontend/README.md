@@ -1,73 +1,45 @@
-# React + TypeScript + Vite
+# 🎨 OnlineMocks 2026 - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the frontend portal for the **OnlineMocks 2026** platform. Built with a focus on speed, accessibility, and premium aesthetics.
 
-Currently, two official plugins are available:
+## 🚀 Modern Architecture
+- **React 19:** Utilizing the latest concurrent features and hooks.
+- **Vite 7:** High-speed development and optimized production builds.
+- **Tailwind CSS v4:** Next-generation CSS framework with ultra-fast compilation and advanced styling capabilities.
+- **Shadcn UI & Radix:** Accessible, headless UI components styled for a premium feel.
+- **Framer Motion:** Smooth micro-interactions and page transitions.
+- **Zustand:** Efficient, boilerplate-free state management.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 📂 Key Modules
+- `/api`: Type-safe Axios instances and API services.
+- `/pages`: Role-based dashboards (Admin, HR, Pipeline, Volunteer).
+- `/components`: A curated library of reusable shadcn/ui and custom components.
+- `/lib`: Utility functions and shared helpers.
+- `/store`: Global state management for user sessions and real-time data.
 
-## React Compiler
+## 🛠️ Development Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1. Install Dependencies
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2. Environment Configuration
+Create a `.env` file referencing `.env.example` if available.
+```bash
+VITE_API_URL=http://localhost:5000
 ```
+
+### 3. Run Development Server
+```bash
+npm run dev
+```
+
+### 4. Build for Production
+```bash
+npm run build
+```
+
+---
+
+Built with precision for seamless recruitment experiences.
